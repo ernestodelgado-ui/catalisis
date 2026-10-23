@@ -152,6 +152,10 @@ h1.name{font-weight:800;letter-spacing:-.02em;font-size:clamp(20px,6vw,26px);lin
 .map-name{font-weight:800;font-size:20px;letter-spacing:-.02em;line-height:1.15}.map-name span{color:var(--mute);font-weight:500}
 .map-bar{display:flex;gap:3px;height:8px;margin:8px 0}.map-bar i{display:block;border-radius:2px}
 .map-route{font-size:13px;color:var(--mute);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.map-lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#9A9AA2;margin:2px 0 3px}
+.map-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.map-listen{flex:none;padding:9px 14px;font-size:14px;color:#fff}
+.map-listen.on{background:transparent;color:#F2F2EE;border-color:#F2F2EE}
 .map-where{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:6px}
 .export .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .export .choices .btn{font-size:17px;font-weight:800;letter-spacing:.01em;padding:15px 8px;line-height:1.2}
@@ -601,18 +605,24 @@ function openMap(){
  vp.addEventListener('wheel',e=>{e.preventDefault();const r=vp.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-e.deltaY*.0015))},{passive:false});
  const sizeOf=()=>Math.max(38,170*sc);
  const pick=(px,py)=>{let best=null,bd=1e9;for(const b of beings){const sx=tx+b.x*sc,sy=ty+b.y*sc,d=Math.hypot(sx-px,sy-py);if(d<bd){bd=d;best=b}}
-  sel=best&&bd<Math.max(26,sizeOf()*.45)?best:null;showCard()};
+  if(best&&bd<Math.max(26,sizeOf()*.45)){sel=best;if(playing&&playing!==sel)playBeing(sel)}else if(!playing)sel=null; /* mientras suena, tocar un lugar vacío no corta la música */
+  showCard()};
+ // escuchar a otro ser: su paisaje sonoro sale de los elementos con que fue hecho (siempre suena igual)
+ let playing=null;
+ const stopListen=()=>{if(playing){rfStop();playing=null}};
+ const playBeing=b=>{const counts={};b.route.forEach(h=>{counts[h.e]=(counts[h.e]||0)+1});rfStop();playing=rfStart(counts,b.seed)?b:null};
  const showCard=()=>{if(!sel){card.innerHTML=`<p class="map-hint">${beings.length} seres en la feria · tocá uno para conocerlo</p>`;return}
   const b=sel,tc=topConcepts(b.mix),tot=tc.reduce((a,c)=>a+b.mix[c.id],0)||1;
   const bars=tc.map(c=>`<i style="flex:${b.mix[c.id]/tot};background:${c.color}"></i>`).join('');
   const route=b.route.map(h=>(CONCEPTS.find(c=>c.id===h.c)||{}).word+' · '+h.e).join('  →  ')||'Todavía sin elementos';
   const zc=ZONE_COL[b.zone.c];
-  card.innerHTML=`<div class="map-name">${b.me?'Tu ser · ':''}${nameFor(b.mix,b.n)}${b.name?` <span>de ${b.name}</span>`:''}</div><div class="map-bar">${bars}</div><div class="map-route">${route}</div><div class="map-where" style="color:${zc}">Cerca de: ${b.zone.label}</div>`};
+  card.innerHTML=`<div class="map-name">${b.me?'Tu ser · ':''}${nameFor(b.mix,b.n)}${b.name?` <span>de ${b.name}</span>`:''}</div><div class="map-bar">${bars}</div><div class="map-lbl">Así fue hecho</div><div class="map-route">${route}</div><div class="map-row"><div class="map-where" style="color:${zc}">Cerca de: ${b.zone.label}</div><button class="btn primary map-listen${playing===b?' on':''}" id="map-listen" type="button">${playing===b?'■ Detener':'♫ Escuchar a este ser'}</button></div>`;
+  card.querySelector('#map-listen').onclick=()=>{if(playing===b)stopListen();else playBeing(b);showCard()}};
  showCard();
- ms.querySelector('#map-close').onclick=()=>ms.remove();
+ ms.querySelector('#map-close').onclick=()=>{stopListen();ms.remove()};
  // dibujo y movimiento
  const t0=performance.now();
- const frame=now=>{if(!ms.isConnected)return;if(!vw){requestAnimationFrame(frame);return}tNow=(now-t0)/1000;
+ const frame=now=>{if(!ms.isConnected){stopListen();return}if(!vw){requestAnimationFrame(frame);return}tNow=(now-t0)/1000;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);
   if(MAP_BASE)ctx.drawImage(MAP_BASE,tx,ty,MAP_W*sc,MAP_H*sc);
   const fx={...FX};FX={dentA:0,dentM:0,squash:0,bubble:0};const sz=sizeOf();window.__mapDark=true;
@@ -621,6 +631,8 @@ function openMap(){
    ctx.save();ctx.translate(sx,sy);ctx.rotate(b.rot*Math.sin(tNow*.3+b.ph)+tNow*.05);ctx.translate(-sz/2,-sz/2);draw(ctx,sz,b.T,tNow+b.ph,b.mix,b.seed,null);ctx.restore();
    if(b.me||b===sel){ctx.save();ctx.strokeStyle=b.me?'#FF00B2':'#F2F2EE';ctx.lineWidth=3;ctx.setLineDash(b.me?[7,5]:[]);ctx.lineDashOffset=-tNow*10;ctx.beginPath();ctx.arc(sx,sy,sz*.2,0,7);ctx.stroke();ctx.restore()}}
   window.__mapDark=false;FX=fx;
+  // ondas de sonido alrededor del ser que se está escuchando
+  if(playing){const px=tx+playing.x*sc,py=ty+playing.y*sc;ctx.save();ctx.lineWidth=2;for(let k=0;k<3;k++){const ph=(tNow*.55+k/3)%1;ctx.strokeStyle=`rgba(242,242,238,${((1-ph)*.55).toFixed(3)})`;ctx.beginPath();ctx.arc(px,py,sz*(.24+ph*.55),0,7);ctx.stroke()}ctx.restore()}
   // el nombre de quien mira, para encontrar su ser
   {const me=beings.find(q=>q.me),px=tx+me.x*sc,py=ty+me.y*sc-sz*.34,txt=me.name||'Vos',fs=13;ctx.font=`800 ${fs}px Inter, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';const w=ctx.measureText(txt).width+18;
    ctx.fillStyle='#FF00B2';ctx.beginPath();ctx.roundRect?ctx.roundRect(px-w/2,py-11,w,22,11):ctx.rect(px-w/2,py-11,w,22);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(txt,px,py+1)}
@@ -632,20 +644,25 @@ function openMap(){
 
 /*REFUGIO_START*/
 // REFUGIO: paisaje sonoro generativo (un sonido sintetizado por cada subelemento) y pantalla de calma
+let rfRand=Math.random.bind(Math),RF_ROOT=1;
+const rfSeed=n=>{let a=(n>>>0)||1;rfRand=()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}};
+const rfUnseed=()=>{rfRand=Math.random.bind(Math);RF_ROOT=1};
+const RF_ROOTS=[1,1.122,1.189,1.26,1.335,1.498];
 const RF_SCALE=[0,3,5,7,10];
-const rfHz=(n,oct=0)=>220*Math.pow(2,(RF_SCALE[((n%5)+5)%5]+12*(Math.floor(n/5)+oct))/12);
-const rfR=(a,b)=>a+Math.random()*(b-a);
+const rfHz=(n,oct=0)=>220*RF_ROOT*Math.pow(2,(RF_SCALE[((n%5)+5)%5]+12*(Math.floor(n/5)+oct))/12);
+const rfR=(a,b)=>a+rfRand()*(b-a);
 const rfI=(a,b)=>Math.floor(rfR(a,b+1));
+const rfLcg=seed=>{let q=seed>>>0;return()=>(q=(Math.imul(q,1664525)+1013904223)>>>0)/4294967296};
 function rfNoise(ctx,k){ctx._nz=ctx._nz||{};if(ctx._nz[k])return ctx._nz[k];
  const len=ctx.sampleRate*4,buf=ctx.createBuffer(2,len,ctx.sampleRate);
- for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0,last=0;
-  for(let i=0;i<len;i++){const w=Math.random()*2-1;
+ for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0,last=0;const nx=rfLcg(7919+ch*131+k.length);
+  for(let i=0;i<len;i++){const w=nx()*2-1;
    if(k==='white')d[i]=w*.5;
    else if(k==='pink'){b0=.99765*b0+w*.099046;b1=.963*b1+w*.2965164;b2=.57*b2+w*1.0526913;d[i]=(b0+b1+b2+w*.1848)*.11}
    else{last=(last+.02*w)/1.02;d[i]=last*3.5}}}
  return ctx._nz[k]=buf}
 function rfImpulse(ctx){const len=ctx.sampleRate*2.6,buf=ctx.createBuffer(2,len,ctx.sampleRate);
- for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}return buf}
+ for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch),nx=rfLcg(104729+ch*977);for(let i=0;i<len;i++)d[i]=(nx()*2-1)*Math.pow(1-i/len,2.6)}return buf}
 const rfEnv=(g,t,a,d,pk)=>{g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(pk,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d)};
 function rfLayer(ctx,out,T0,fn){
  const L={ctx,t0:T0,srcs:[],evs:[],w:1};
@@ -654,11 +671,11 @@ function rfLayer(ctx,out,T0,fn){
  if(pan){pan.pan.value=rfR(-.55,.55);L.g.connect(pan);pan.connect(out)}else L.g.connect(out);
  L.f=(type,freq,q=1)=>{const f=ctx.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;return f};
  L.gain=v=>{const g=ctx.createGain();g.gain.value=v;return g};
- L.src=k=>{const s=ctx.createBufferSource();s.buffer=rfNoise(ctx,k);s.loop=true;s.start(T0,Math.random()*3);L.srcs.push(s);return s};
+ L.src=k=>{const s=ctx.createBufferSource();s.buffer=rfNoise(ctx,k);s.loop=true;s.start(T0,rfRand()*3);L.srcs.push(s);return s};
  L.osc=(type,f)=>{const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.start(T0);L.srcs.push(o);return o};
  L.lfo=(param,rate,depth)=>{const o=L.osc('sine',rate),g=L.gain(depth);o.connect(g);g.connect(param)};
  L.delay=(time,fb,mix)=>{const d=ctx.createDelay(1.5),f=L.gain(fb),w=L.gain(mix);d.delayTime.value=time;d.connect(f);f.connect(d);d.connect(w);w.connect(L.g);L.d=d;return d};
- L.ev=(min,max,f)=>L.evs.push({min,max,f,next:T0+(min===max?.05:Math.random()*min)});
+ L.ev=(min,max,f)=>L.evs.push({min,max,f,next:T0+(min===max?.05:rfRand()*min)});
  L.sched=up=>{for(const e of L.evs){let n=0;while(e.next<up&&n++<500){e.f(e.next);e.next+=e.min===e.max?e.min:rfR(e.min,e.max)}}};
  L.stop=t=>{L.g.gain.cancelScheduledValues(t);L.g.gain.setTargetAtTime(0,t,.3);for(const s of L.srcs){try{s.stop(t+2)}catch(e){}}};
  fn(L);return L}
@@ -666,7 +683,7 @@ function rfPing(L,t,f,dur,vol,type='sine',bend=1){const c=L.ctx,o=c.createOscill
  if(bend!==1)o.frequency.exponentialRampToValueAtTime(f*bend,t+dur*.6);rfEnv(g,t,.008,dur,vol);o.connect(g);g.connect(L.g);if(L.d)g.connect(L.d);o.start(t);o.stop(t+dur+.05)}
 function rfBurst(L,t,kind,ft,f,q,dur,vol,f2,att){const c=L.ctx,s=c.createBufferSource(),fl=L.f(ft,f,q),g=c.createGain();s.buffer=rfNoise(c,kind);s.loop=true;
  if(f2){fl.frequency.setValueAtTime(f,t);fl.frequency.exponentialRampToValueAtTime(f2,t+dur)}
- rfEnv(g,t,att||Math.min(.01,dur/3),dur,vol);s.connect(fl);fl.connect(g);g.connect(L.g);s.start(t,Math.random()*3);s.stop(t+dur+(att||0)+.06)}
+ rfEnv(g,t,att||Math.min(.01,dur/3),dur,vol);s.connect(fl);fl.connect(g);g.connect(L.g);s.start(t,rfRand()*3);s.stop(t+dur+(att||0)+.06)}
 function rfThump(L,t,f0,f1,dur,vol){const c=L.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);
  rfEnv(g,t,.005,dur,vol);o.connect(g);g.connect(L.g);o.start(t);o.stop(t+dur+.05);
  if(f0<150){const h=c.createOscillator(),hg=c.createGain();h.type='triangle';h.frequency.setValueAtTime(f0*3,t);h.frequency.exponentialRampToValueAtTime(f1*3,t+dur);rfEnv(hg,t,.005,dur*.8,vol*.55);h.connect(hg);hg.connect(L.g);h.start(t);h.stop(t+dur+.05)}}
@@ -683,19 +700,19 @@ const RF_SND={
  'Marca':L=>{L.delay(.3,.35,.4);L.ev(1.5,4,t=>rfBell(L,t,rfHz(rfI(0,9),1),.06,2.4))},
  'Mariposa':L=>{L.ev(2,5.5,t=>{const n=rfI(3,6);for(let i=0;i<n;i++)rfBurst(L,t+i*.085,'white','bandpass',rfR(2200,3400),3,.06,.1)})},
  // TIERRA
- 'Rama':L=>{L.ev(.9,3.2,t=>{rfThump(L,t,200,95,.14,.22);rfBurst(L,t,'white','bandpass',900,2,.03,.12);if(Math.random()<.4)rfThump(L,t+.24,170,85,.12,.16)})},
+ 'Rama':L=>{L.ev(.9,3.2,t=>{rfThump(L,t,200,95,.14,.22);rfBurst(L,t,'white','bandpass',900,2,.03,.12);if(rfRand()<.4)rfThump(L,t+.24,170,85,.12,.16)})},
  'Rueda':L=>{const n=L.src('brown'),f=L.f('lowpass',140),g=L.gain(.18);n.connect(f);f.connect(g);g.connect(L.g);L.ev(.62,.62,t=>rfBurst(L,t,'pink','bandpass',1500,3,.035,.1))},
- 'Huella':L=>{L.ev(.55,.65,t=>{if(Math.random()<.12)return;rfThump(L,t,90,55,.1,.18);for(let i=0;i<3;i++)rfBurst(L,t+i*.02,'white','highpass',rfR(1500,2400),.7,.07,.07)})},
+ 'Huella':L=>{L.ev(.55,.65,t=>{if(rfRand()<.12)return;rfThump(L,t,90,55,.1,.18);for(let i=0;i<3;i++)rfBurst(L,t+i*.02,'white','highpass',rfR(1500,2400),.7,.07,.07)})},
  'Raíz':L=>{const a=L.osc('sine',55),b=L.osc('sine',82.4),ga=L.gain(.045),gb=L.gain(.03),n=L.src('brown'),nf=L.f('lowpass',160),gn=L.gain(.008);a.connect(ga);ga.connect(L.g);b.connect(gb);gb.connect(L.g);{const h1=L.osc('triangle',165),hg=L.gain(.02);h1.connect(hg);hg.connect(L.g);const h2=L.osc('sine',247),hg2=L.gain(.012);h2.connect(hg2);hg2.connect(L.g)}n.connect(nf);nf.connect(gn);gn.connect(L.g);L.lfo(ga.gain,.05,.012)},
  'Brote':L=>{L.ev(.5,1.4,t=>{const f=rfR(4100,4700),n=rfI(3,5);for(let i=0;i<n;i++)rfPing(L,t+i*.05,f,.04,.035)})},
  // AGUA
- 'Caracol':L=>{L.delay(.42,.4,.5);const seq=[0,1,2,3,4,3,2,1];let i=0;L.ev(.5,.5,t=>{if(Math.random()<.12)return;rfPing(L,t,rfHz(seq[i++%8],1),1.6,.08)})},
+ 'Caracol':L=>{L.delay(.42,.4,.5);const seq=[0,1,2,3,4,3,2,1];let i=0;L.ev(.5,.5,t=>{if(rfRand()<.12)return;rfPing(L,t,rfHz(seq[i++%8],1),1.6,.08)})},
  'Estrella':L=>{const n=L.src('pink'),f=L.f('lowpass',650),g=L.gain(.28),h=L.src('white'),hf=L.f('highpass',3500),hg=L.gain(.03);n.connect(f);f.connect(g);g.connect(L.g);h.connect(hf);hf.connect(hg);hg.connect(L.g);L.lfo(g.gain,.11,.22);L.lfo(hg.gain,.11,.025)},
  'Cuadrado':L=>{const pat=[[1,0,1,1,0,1,0,0],[1,1,0,1,0,0,1,0]];let i=0,p=pat[0];L.ev(.6,.6,t=>{if(i%8===0)p=pat[rfI(0,1)];if(p[i++%8])rfPing(L,t,rfHz(rfI(0,9),rfI(0,1)),.5,.1,'triangle')})},
  'Gota':L=>{L.delay(.28,.35,.45);L.ev(.5,2.2,t=>rfPing(L,t,rfR(700,1300),.12,.16,'sine',2.1))},
  'Onda':L=>{const n=L.src('white'),b=L.f('bandpass',1100,1.1),g=L.gain(.06),m=L.src('white'),b2=L.f('bandpass',2600,1.4),g2=L.gain(.025);n.connect(b);b.connect(g);g.connect(L.g);m.connect(b2);b2.connect(g2);g2.connect(L.g);L.lfo(b.frequency,.31,350);L.lfo(b2.frequency,.17,600);L.lfo(g.gain,.23,.025)},
  // FUEGO
- 'Trama':L=>{L.ev(.03,.18,t=>{rfBurst(L,t,'white','highpass',rfR(1200,3000),.7,.012,rfR(.05,.2));if(Math.random()<.3)rfBurst(L,t+.01,'white','highpass',rfR(2000,4500),.7,.01,.08)})},
+ 'Trama':L=>{L.ev(.03,.18,t=>{rfBurst(L,t,'white','highpass',rfR(1200,3000),.7,.012,rfR(.05,.2));if(rfRand()<.3)rfBurst(L,t+.01,'white','highpass',rfR(2000,4500),.7,.01,.08)})},
  'Pincelada':L=>{L.ev(4,9,t=>rfBurst(L,t,'pink','bandpass',300,.9,2.8,.1,2600,1.2))},
  'Grieta':L=>{L.ev(1.2,4,t=>{rfThump(L,t,70,45,.18,.3);rfBurst(L,t,'white','bandpass',700,1.5,.015,.25);rfBurst(L,t+.02,'pink','lowpass',500,1,.2,.1)})},
  'Chispa':L=>{L.ev(.3,1.4,t=>{rfBurst(L,t,'white','highpass',rfR(5000,8000),.8,rfR(.08,.18),.07);rfPing(L,t,rfR(3000,5000),.05,.02)})},
@@ -715,9 +732,9 @@ function rfBuild(ctx,dest,counts){
  const keys=Object.keys(counts).filter(k=>RF_SND[k]);
  const layers=[rfLayer(ctx,bus,T0,RF_BED),...keys.map(k=>rfLayer(ctx,bus,T0,RF_SND[k]))];
  layers[0].w=.8;keys.forEach((k,i)=>layers[i+1].w=Math.min(1.5,.65+.35*counts[k]));
- const level=Math.min(.9,2.2/Math.sqrt(layers.length));
+ const level=Math.min(.9,2.2/Math.sqrt(layers.length));let cur=T0;
  return{ctx,master,level,layers,keys,
-  sched:up=>layers.forEach(l=>l.sched(up)),
+  sched:up=>{while(cur+.5<=up){cur+=.5;layers.forEach(l=>l.sched(cur))}},
   start(instant){const t=ctx.currentTime;if(instant){master.gain.value=level;layers.forEach(l=>l.g.gain.value=l.w)}else{master.gain.setTargetAtTime(level,t,1.2);layers.forEach(l=>l.g.gain.setTargetAtTime(l.w,t,.9))}},
   mute(on){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(on?0:level,ctx.currentTime,.25)},
   stop(){const t=ctx.currentTime;master.gain.cancelScheduledValues(t);master.gain.setTargetAtTime(0,t,.5);layers.forEach(l=>l.stop(t))}}}
@@ -731,10 +748,10 @@ function rfUnlockAudio(){
    const a=new Audio(URL.createObjectURL(new Blob([b],{type:'audio/wav'})));a.loop=true;a.setAttribute('playsinline','');REF.keep=a}
   const p=REF.keep.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
 function rfWake(){try{if(REF.ctx&&REF.ctx.state!=='running'&&REF.ctx.state!=='closed')REF.ctx.resume();if(REF.keep&&REF.keep.paused)REF.keep.play().catch(()=>{})}catch(e){}}
-function rfStart(){try{rfUnlockAudio();const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;if(!REF.ctx){try{REF.ctx=new AC({latencyHint:'playback'})}catch(e){REF.ctx=new AC()}}REF.ctx.onstatechange=()=>{if(REF.eng&&REF.ctx.state==='interrupted')rfWake()};if(REF.ctx.state!=='running')REF.ctx.resume();
- REF.eng=rfBuild(REF.ctx,REF.ctx.destination,rfCounts());REF.muted=false;REF.eng.sched(REF.ctx.currentTime+2.5);REF.eng.start();
+function rfStart(counts,seed){try{rfUnlockAudio();if(seed!=null){rfSeed(seed);RF_ROOT=RF_ROOTS[seed%RF_ROOTS.length]}else rfUnseed();const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;if(!REF.ctx){try{REF.ctx=new AC({latencyHint:'playback'})}catch(e){REF.ctx=new AC()}}REF.ctx.onstatechange=()=>{if(REF.eng&&REF.ctx.state==='interrupted')rfWake()};if(REF.ctx.state!=='running')REF.ctx.resume();
+ REF.eng=rfBuild(REF.ctx,REF.ctx.destination,counts||rfCounts());REF.muted=false;REF.eng.sched(REF.ctx.currentTime+2.5);REF.eng.start();
  REF.timer=setInterval(()=>{if(REF.eng&&REF.ctx.state==='running')REF.eng.sched(REF.ctx.currentTime+2.5)},300);return true}catch(e){return false}}
-function rfStop(){clearInterval(REF.timer);REF.timer=null;try{if(REF.keep)REF.keep.pause()}catch(e){}if(REF.eng){try{REF.eng.stop()}catch(e){}}REF.eng=null}
+function rfStop(){clearInterval(REF.timer);REF.timer=null;rfUnseed();try{if(REF.keep)REF.keep.pause()}catch(e){}if(REF.eng){try{REF.eng.stop()}catch(e){}}REF.eng=null}
 
 // ---- pantallas ----
 function refugioNudge(){if(S.rfDone||S.history.length<6)return;S.rfDone=true;S.refugio=true;S.refugioSeen=true;save();if(document.getElementById('org'))renderHome();setTimeout(openRefugioUnlock,350)}
@@ -766,7 +783,7 @@ function openRefugio(){
  const onR=()=>fit();addEventListener('resize',onR);
  // paleta etérea: lila, azul pervinca, agua, rosa pálido
  const PAL=[[150,140,255],[120,200,255],[170,255,240],[235,170,255],[140,160,255]];
- const dust=Array.from({length:70},()=>({x:Math.random(),y:Math.random(),s:Math.random(),ph:Math.random()*6.28}));
+ const dust=Array.from({length:70},()=>({x:rfRand(),y:rfRand(),s:rfRand(),ph:rfRand()*6.28}));
  const T={...S.traits};if(!(T.core>0))T.core=1.4;const t0=performance.now();let lastB='',leaving=0,k=0;
  const aurora=t=>{bctx.setTransform(1,0,0,1,0,0);bctx.clearRect(0,0,BW,BH);bctx.globalCompositeOperation='lighter';
   for(let r=0;r<5;r++){const base=BH*(.2+.13*r),amp=BH*(.05+.018*r),th=BH*(.3+.04*r),c=PAL[r%PAL.length],sp=1+r*.12;

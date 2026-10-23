@@ -75,6 +75,10 @@ Se desbloquea al llenar la barra (etapa final) y usar un superpoder: cuando term
 - **iPhone:** el interruptor de silencio apaga el audio de las webs. La app activa la sesión de audio "playback" y reproduce un audio mudo en bucle para que suene igual; si el teléfono lo bloquea, el botón dice "Tocá para activar el sonido".
 - El sonido solo arranca tras un toque (regla de los navegadores) y se pausa si se cierra la pantalla o se cambia de app.
 
+## Escuchar a otros seres (mapa)
+
+En el mapa, al tocar un ser se abre su ficha con **Así fue hecho** (su recorrido de elementos) y el botón **♫ Escuchar a este ser**. Suena su paisaje sonoro, armado con los sonidos de los elementos que lo componen. Cada ser suena siempre igual (la semilla del ser fija el azar y la tonalidad). Al tocar otro ser mientras suena, cambia el sonido; al tocar un lugar vacío, la música sigue; al cerrar el mapa, se corta.
+
 ## Pendientes conocidos
 
 - Las hojas del logo están trazadas a ojo sobre la imagen. Conviene reemplazarlas por el SVG oficial (`LEAF_PATHS` y `LEAF_D`).
@@ -86,4 +90,5 @@ Se desbloquea al llenar la barra (etapa final) y usar un superpoder: cuando term
 ## Probarla en local
 
 Abrí una terminal en esta carpeta y corré `npx serve` (o `python -m http.server`). Después entrá a la dirección que muestre. Abrir `index.html` con doble clic también funciona, pero ahí no se registra el modo sin conexión.
+
 
