@@ -702,12 +702,14 @@ function renderExport(){
    if(navigator.share){await navigator.share({title:d.title,text:txt});thanks('¡Compartido! El cambio empieza con vos.');return}
    download(b)}catch(e){if(e&&e.name==='AbortError')return;download(b)}},'image/png');
  sh.querySelector('.close').onclick=()=>sh.remove();sh.onclick=e=>{if(e.target===sh)sh.remove()};
- sh.querySelector('#reset').onclick=()=>{S=fresh();D={...BASE};save();sh.remove();renderIntro()};
+ sh.querySelector('#reset').onclick=()=>{S=fresh();D={...BASE};save();sh.remove();renderWelcome()};
  document.body.appendChild(sh);
 }
 
 // ARRANQUE: un QR real abre la app con #aire, #tierra, #agua, #fuego o #corazon
 const setH=()=>document.documentElement.style.setProperty('--app-h',innerHeight+'px');setH();addEventListener('resize',setH);addEventListener('orientationchange',()=>setTimeout(setH,250));
+// #inicio borra lo guardado y vuelve a la bienvenida (para probar la experiencia desde cero)
+if(/^#(inicio|bienvenida|reset)$/.test(location.hash)){S=fresh();D={...BASE};save();history.replaceState(null,'',location.pathname+location.search)}
 paintBg();S.started?renderHome():renderWelcome();
 const h=(location.hash||'').replace('#','');const target=CONCEPTS.find(c=>c.id===h);
 if(target){if(!S.started){S.started=true;save();renderHome()}setTimeout(()=>openConcept(target),400)}
