@@ -11,6 +11,7 @@ Es una sola página estática: no necesita servidor ni base de datos.
 | `index.html` | Toda la app (código, estilos y el mapa de la feria embebido) |
 | `manifest.webmanifest` | Permite instalarla como app en el celular |
 | `sw.js` | Hace que abra sin conexión; las actualizaciones llegan solas |
+| `favicon.ico`, `favicon.svg`, `favicon-32.png` | Ícono de la pestaña del navegador (las dos hojas rosas, fondo transparente) |
 | `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Íconos de la app |
 | `.nojekyll` | Le dice a GitHub que sirva los archivos tal cual |
 
@@ -31,6 +32,16 @@ git branch -M main
 git remote add origin https://github.com/TU-USUARIO/bioferia-catalisis.git
 git push -u origin main
 ```
+
+## Subirla a Vercel
+
+La carpeta ya está lista para Vercel, sin configuración:
+
+1. En vercel.com: **Add New → Project** e importá el repositorio de GitHub.
+2. En *Framework Preset* dejá **Other**. No hace falta comando de build ni carpeta de salida.
+3. **Deploy**. La dirección queda como `https://NOMBRE.vercel.app/`.
+
+El favicon se carga solo: Vercel sirve `/favicon.ico` desde la raíz, y `index.html` también apunta al SVG y al PNG. Los QR funcionan igual, con el ancla al final (`…vercel.app/#agua`).
 
 ## Códigos QR de la feria
 

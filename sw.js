@@ -1,6 +1,6 @@
 // Service worker: guarda la app para que abra sin conexión. Primero intenta la red, así las actualizaciones llegan solas.
-const CACHE='catalisis-v1';
-const SHELL=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
+const CACHE='catalisis-v2';
+const SHELL=['./','index.html','manifest.webmanifest','favicon.svg','favicon.ico','icon-192.png','icon-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==CACHE).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
