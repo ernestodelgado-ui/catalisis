@@ -102,6 +102,7 @@ h1.name{font-weight:800;letter-spacing:-.02em;font-size:clamp(20px,6vw,26px);lin
 .rf-unlock .eyebrow{color:#C6C6CE}
 .rf-unlock h2{font-family:var(--body);font-weight:900;font-size:clamp(46px,15vw,64px);letter-spacing:-.04em;line-height:1;margin:0}
 .rf-unlock p{color:#C6C6CE;line-height:1.5;margin:6px 0 14px}.rf-unlock p b{color:#fff}
+.rf-tip{display:block;color:#8E8EA0;font-size:12px;line-height:1.4;margin:-4px 0 14px}
 .rf-unlock .btn{width:100%}.rf-unlock .close{color:#9A9AA2}
 .refugio{position:fixed;inset:0;z-index:72;background:linear-gradient(180deg,#04051a 0%,#0b1033 55%,#03040e 100%);color:#F2F2EE;overflow:hidden;animation:rfIn 1.2s ease both}
 #rf-bg{position:absolute;left:0;top:0;filter:blur(16px);opacity:.95}
@@ -667,7 +668,8 @@ function rfBurst(L,t,kind,ft,f,q,dur,vol,f2,att){const c=L.ctx,s=c.createBufferS
  if(f2){fl.frequency.setValueAtTime(f,t);fl.frequency.exponentialRampToValueAtTime(f2,t+dur)}
  rfEnv(g,t,att||Math.min(.01,dur/3),dur,vol);s.connect(fl);fl.connect(g);g.connect(L.g);s.start(t,Math.random()*3);s.stop(t+dur+(att||0)+.06)}
 function rfThump(L,t,f0,f1,dur,vol){const c=L.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);
- rfEnv(g,t,.005,dur,vol);o.connect(g);g.connect(L.g);o.start(t);o.stop(t+dur+.05)}
+ rfEnv(g,t,.005,dur,vol);o.connect(g);g.connect(L.g);o.start(t);o.stop(t+dur+.05);
+ if(f0<150){const h=c.createOscillator(),hg=c.createGain();h.type='triangle';h.frequency.setValueAtTime(f0*3,t);h.frequency.exponentialRampToValueAtTime(f1*3,t+dur);rfEnv(hg,t,.005,dur*.8,vol*.55);h.connect(hg);hg.connect(L.g);h.start(t);h.stop(t+dur+.05)}}
 function rfBell(L,t,f,vol,dur){const c=L.ctx,o=c.createOscillator(),m=c.createOscillator(),mg=c.createGain(),g=c.createGain();o.frequency.value=f;m.frequency.value=f*2.76;
  mg.gain.setValueAtTime(f*1.4,t);mg.gain.exponentialRampToValueAtTime(1,t+dur*.7);m.connect(mg);mg.connect(o.frequency);rfEnv(g,t,.006,dur,vol);o.connect(g);g.connect(L.g);if(L.d)g.connect(L.d);
  o.start(t);m.start(t);o.stop(t+dur+.05);m.stop(t+dur+.05)}
@@ -684,7 +686,7 @@ const RF_SND={
  'Rama':L=>{L.ev(.9,3.2,t=>{rfThump(L,t,200,95,.14,.22);rfBurst(L,t,'white','bandpass',900,2,.03,.12);if(Math.random()<.4)rfThump(L,t+.24,170,85,.12,.16)})},
  'Rueda':L=>{const n=L.src('brown'),f=L.f('lowpass',140),g=L.gain(.18);n.connect(f);f.connect(g);g.connect(L.g);L.ev(.62,.62,t=>rfBurst(L,t,'pink','bandpass',1500,3,.035,.1))},
  'Huella':L=>{L.ev(.55,.65,t=>{if(Math.random()<.12)return;rfThump(L,t,90,55,.1,.18);for(let i=0;i<3;i++)rfBurst(L,t+i*.02,'white','highpass',rfR(1500,2400),.7,.07,.07)})},
- 'Raíz':L=>{const a=L.osc('sine',55),b=L.osc('sine',82.4),ga=L.gain(.045),gb=L.gain(.03),n=L.src('brown'),nf=L.f('lowpass',160),gn=L.gain(.008);a.connect(ga);ga.connect(L.g);b.connect(gb);gb.connect(L.g);n.connect(nf);nf.connect(gn);gn.connect(L.g);L.lfo(ga.gain,.05,.012)},
+ 'Raíz':L=>{const a=L.osc('sine',55),b=L.osc('sine',82.4),ga=L.gain(.045),gb=L.gain(.03),n=L.src('brown'),nf=L.f('lowpass',160),gn=L.gain(.008);a.connect(ga);ga.connect(L.g);b.connect(gb);gb.connect(L.g);{const h1=L.osc('triangle',165),hg=L.gain(.02);h1.connect(hg);hg.connect(L.g);const h2=L.osc('sine',247),hg2=L.gain(.012);h2.connect(hg2);hg2.connect(L.g)}n.connect(nf);nf.connect(gn);gn.connect(L.g);L.lfo(ga.gain,.05,.012)},
  'Brote':L=>{L.ev(.5,1.4,t=>{const f=rfR(4100,4700),n=rfI(3,5);for(let i=0;i<n;i++)rfPing(L,t+i*.05,f,.04,.035)})},
  // AGUA
  'Caracol':L=>{L.delay(.42,.4,.5);const seq=[0,1,2,3,4,3,2,1];let i=0;L.ev(.5,.5,t=>{if(Math.random()<.12)return;rfPing(L,t,rfHz(seq[i++%8],1),1.6,.08)})},
@@ -721,10 +723,18 @@ function rfBuild(ctx,dest,counts){
   stop(){const t=ctx.currentTime;master.gain.cancelScheduledValues(t);master.gain.setTargetAtTime(0,t,.5);layers.forEach(l=>l.stop(t))}}}
 const REF={ctx:null,eng:null,timer:null,muted:false,raf:0};
 function rfCounts(){const c={};for(const h of S.history)c[h.e]=(c[h.e]||0)+1;return c}
-function rfStart(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;REF.ctx=REF.ctx||new AC();if(REF.ctx.state==='suspended')REF.ctx.resume();
+// iPhone: el interruptor de silencio apaga el audio de la web. Con la sesión de audio en 'playback' y un sonido mudo en bucle, el audio suena igual.
+function rfUnlockAudio(){
+ try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+ try{if(!REF.keep){const n=8000,b=new Uint8Array(44+n),d=new DataView(b.buffer),w=(o,t)=>{for(let i=0;i<t.length;i++)b[o+i]=t.charCodeAt(i)};
+   w(0,'RIFF');d.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,8000,true);d.setUint32(28,8000,true);d.setUint16(32,1,true);d.setUint16(34,8,true);w(36,'data');d.setUint32(40,n,true);b.fill(128,44);
+   const a=new Audio(URL.createObjectURL(new Blob([b],{type:'audio/wav'})));a.loop=true;a.setAttribute('playsinline','');REF.keep=a}
+  const p=REF.keep.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
+function rfWake(){try{if(REF.ctx&&REF.ctx.state!=='running'&&REF.ctx.state!=='closed')REF.ctx.resume();if(REF.keep&&REF.keep.paused)REF.keep.play().catch(()=>{})}catch(e){}}
+function rfStart(){try{rfUnlockAudio();const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;if(!REF.ctx){try{REF.ctx=new AC({latencyHint:'playback'})}catch(e){REF.ctx=new AC()}}REF.ctx.onstatechange=()=>{if(REF.eng&&REF.ctx.state==='interrupted')rfWake()};if(REF.ctx.state!=='running')REF.ctx.resume();
  REF.eng=rfBuild(REF.ctx,REF.ctx.destination,rfCounts());REF.muted=false;REF.eng.sched(REF.ctx.currentTime+2.5);REF.eng.start();
  REF.timer=setInterval(()=>{if(REF.eng&&REF.ctx.state==='running')REF.eng.sched(REF.ctx.currentTime+2.5)},300);return true}catch(e){return false}}
-function rfStop(){clearInterval(REF.timer);REF.timer=null;if(REF.eng){try{REF.eng.stop()}catch(e){}}REF.eng=null}
+function rfStop(){clearInterval(REF.timer);REF.timer=null;try{if(REF.keep)REF.keep.pause()}catch(e){}if(REF.eng){try{REF.eng.stop()}catch(e){}}REF.eng=null}
 
 // ---- pantallas ----
 function refugioNudge(){if(S.rfDone||S.history.length<6)return;S.rfDone=true;S.refugio=true;S.refugioSeen=true;save();if(document.getElementById('org'))renderHome();setTimeout(openRefugioUnlock,350)}
@@ -734,6 +744,7 @@ function openRefugioUnlock(){
   <svg class="rf-ico" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 38v-6a22 22 0 0 1 44 0v6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="6" y="36" width="12" height="20" rx="6" fill="currentColor"/><rect x="46" y="36" width="12" height="20" rx="6" fill="currentColor"/></svg>
   <div class="eyebrow">Desbloqueaste</div><h2>Refugio</h2>
   <p>Un momento para conectar con vos.<br><b>Ponete los auriculares.</b></p>
+  <small class="rf-tip">Si no escuchás nada, subí el volumen y sacá el modo silencio del teléfono.</small>
   <button class="btn primary" id="rf-go" type="button">Ingresar</button>
   <button class="close" id="rf-later" type="button">Más tarde</button></div></div>`);
  document.body.appendChild(u);
@@ -783,10 +794,15 @@ function openRefugio(){
   const ph=t%10,b=ph<4?'Inhalá':'Exhalá';if(b!==lastB){br.textContent=b;lastB=b}br.style.opacity=ph<4?.35+.45*(ph/4):.8-.45*((ph-4)/6);
   REF.raf=requestAnimationFrame(frame)};
  REF.raf=requestAnimationFrame(frame);
- const vis=()=>{if(!REF.ctx)return;if(document.hidden)REF.ctx.suspend();else if(ov.isConnected)REF.ctx.resume()};document.addEventListener('visibilitychange',vis);
- const finish=()=>{cancelAnimationFrame(REF.raf);removeEventListener('resize',onR);document.removeEventListener('visibilitychange',vis);rfStop();window.__mapDark=false;ov.remove()};
+ const vis=()=>{if(!REF.ctx)return;if(document.hidden)REF.ctx.suspend();else if(ov.isConnected)rfWake()};document.addEventListener('visibilitychange',vis);addEventListener('pageshow',vis);
+ const finish=()=>{cancelAnimationFrame(REF.raf);removeEventListener('resize',onR);document.removeEventListener('visibilitychange',vis);removeEventListener('pageshow',vis);rfStop();window.__mapDark=false;ov.remove()};
  ov.querySelector('#rf-exit').onclick=()=>{if(leaving)return;leaving=1;rfStop();ov.classList.add('rf-leaving')};
- ov.querySelector('#rf-mute').onclick=e=>{if(!REF.eng)return;REF.muted=!REF.muted;REF.eng.mute(REF.muted);e.target.textContent='Sonido: '+(REF.muted?'no':'sí')};
+ const mute=ov.querySelector('#rf-mute');
+ // si el teléfono bloquea el audio, el botón pasa a "Activar sonido" y un toque lo destraba
+ const blocked=()=>!!REF.ctx&&REF.ctx.state!=='running';
+ setTimeout(()=>{if(ok&&blocked()&&ov.isConnected)mute.textContent='Tocá para activar el sonido'},1500);
+ ov.addEventListener('pointerdown',()=>{if(blocked())rfWake()},{passive:true});
+ mute.onclick=e=>{if(!REF.eng)return;if(blocked()){rfWake();setTimeout(()=>{mute.textContent='Sonido: '+(REF.muted?'no':'sí')},400);return}REF.muted=!REF.muted;REF.eng.mute(REF.muted);e.target.textContent='Sonido: '+(REF.muted?'no':'sí')};
 }
 /*REFUGIO_END*/
 function openPower(){

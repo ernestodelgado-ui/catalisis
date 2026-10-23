@@ -72,6 +72,7 @@ Se desbloquea al llenar la barra (etapa final) y usar un superpoder: cuando term
 
 - Hay un sonido sintetizado por cada subelemento (25 en total, en `RF_SND`). Cada ser suena según los elementos que eligió, y los repetidos suenan más fuerte.
 - Para ajustar un sonido, buscá `const RF_SND=` en `index.html`: cada entrada tiene sus volúmenes. El volumen general está en `rfBuild` (`const level=`).
+- **iPhone:** el interruptor de silencio apaga el audio de las webs. La app activa la sesión de audio "playback" y reproduce un audio mudo en bucle para que suene igual; si el teléfono lo bloquea, el botón dice "Tocá para activar el sonido".
 - El sonido solo arranca tras un toque (regla de los navegadores) y se pausa si se cierra la pantalla o se cambia de app.
 
 ## Pendientes conocidos
