@@ -1,4 +1,4 @@
-# Catálisis · Bioferia
+﻿# Catálisis · Bioferia
 
 Prototipo interactivo de la marca Bioferia. Cada persona recibe una semilla, suma elementos de Aire, Tierra, Agua, Fuego y Corazón, y se lleva un ser único (postal PNG de 1080×1350).
 
@@ -66,13 +66,23 @@ Reemplazá `index.html` en el repositorio (**Add file → Upload files**, mismo 
 - **Frases:** el texto de la bienvenida está en `function renderWelcome`, y el de felicitaciones en `function openCongrats`.
 - **Año de la postal:** buscá `BUENOS AIRES · 2027`.
 
+## Refugio (apartado de sonido)
+
+Se desbloquea al llenar la barra (etapa final) y usar un superpoder: cuando termina el efecto aparece "Desbloqueaste Refugio, un momento para conectar con vos". Al tocar **Ingresar** empieza el sonido; el ser flota en calma, con fondo de auroras, y toma un color etéreo. Al tocar **Salir** recupera su color.
+
+- Hay un sonido sintetizado por cada subelemento (25 en total, en `RF_SND`). Cada ser suena según los elementos que eligió, y los repetidos suenan más fuerte.
+- Para ajustar un sonido, buscá `const RF_SND=` en `index.html`: cada entrada tiene sus volúmenes. El volumen general está en `rfBuild` (`const level=`).
+- El sonido solo arranca tras un toque (regla de los navegadores) y se pausa si se cierra la pantalla o se cambia de app.
+
 ## Pendientes conocidos
 
 - Las hojas del logo están trazadas a ojo sobre la imagen. Conviene reemplazarlas por el SVG oficial (`LEAF_PATHS` y `LEAF_D`).
 - Las tipografías de cada elemento son aproximaciones libres de Google Fonts. Hay que reemplazarlas por las reales de la marca.
 - Los seres del mapa son de muestra. Para mostrar los reales hace falta un servicio que los guarde (por ejemplo, Firebase o Supabase).
 - Las combinaciones del superpoder son provisorias.
+- Los volúmenes de Refugio se ajustaron por medición, no de oído: conviene afinarlos escuchando con auriculares.
 
 ## Probarla en local
 
 Abrí una terminal en esta carpeta y corré `npx serve` (o `python -m http.server`). Después entrá a la dirección que muestre. Abrir `index.html` con doble clic también funciona, pero ahí no se registra el modo sin conexión.
+
