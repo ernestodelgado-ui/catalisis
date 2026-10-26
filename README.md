@@ -1,4 +1,6 @@
-﻿# Catálisis · Bioferia
+# Catálisis 3D · Bioferia
+
+Versión 3D: el ser y sus elementos tienen volumen y se pueden girar con el dedo. Si el celular va lento, baja la calidad sola o vuelve a 2D.
 
 Prototipo interactivo de la marca Bioferia. Cada persona recibe una semilla, suma elementos de Aire, Tierra, Agua, Fuego y Corazón, y se lleva un ser único (postal PNG de 1080×1350).
 
