@@ -40,12 +40,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--agua);outline-o
 .chip{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border:1.5px solid var(--ink);border-radius:999px}
 .stage{position:relative;flex:1 1 0;min-height:0;overflow:hidden;border-radius:18px}
 canvas.org{display:block;touch-action:none;width:100%;height:100%}
-.prompt{position:absolute;left:0;right:0;top:24%;text-align:center;pointer-events:none;padding:0 8px;animation:scrIn .5s ease both;transition:opacity .6s}
+.prompt{position:absolute;left:0;right:0;bottom:10%;text-align:center;pointer-events:none;padding:0 8px;animation:scrIn .5s ease both;transition:opacity .6s}
 .prompt b{display:block;font-weight:800;font-size:clamp(17px,5vw,20px);line-height:1.2;letter-spacing:-.01em}
 .prompt span{display:block;margin-top:4px;font-size:13px;color:var(--mute)}
 .prompt.off{opacity:0}
 .hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;color:var(--mute);pointer-events:none;letter-spacing:.04em}
-.word{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(44px,16vw,80px);line-height:1;text-align:center;opacity:0;transform:scale(.7);transition:opacity .25s,transform .25s}
+.word{position:absolute;left:0;right:0;bottom:11%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(44px,16vw,80px);line-height:1;text-align:center;opacity:0;transform:scale(.7);transition:opacity .25s,transform .25s}
 .word.show{opacity:1;transform:scale(1)}
 .info{flex:0 0 auto;min-width:0}
 h1.name{font-weight:800;letter-spacing:-.02em;font-size:clamp(20px,6vw,26px);line-height:1.1;margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -408,7 +408,7 @@ function burst(color,n=46,ox=.5,oy=.5){for(let i=0;i<n;i++){const a=Math.random(
 // ------------------------------------------------------------------
 // VISTA, DERIVA POR LA PANTALLA E INTERACCIÓN
 // ------------------------------------------------------------------
-const V={rot:0,rotV:0,scale:1,scaleV:0,dentA:0,dentM:0,dentV:0,flash:0,dragging:false,px:0,py:0,vx:0,vy:0,tx:0,ty:0,nextT:0,breath:0,fit:1,ex:0,ey:0};
+const V={rot:0,rotV:0,scale:1,scaleV:0,dentA:0,dentM:0,dentV:0,flash:0,dragging:false,px:0,py:0,vx:0,vy:0,tx:0,ty:0,nextT:0,hold:0,breath:0,fit:1,ex:0,ey:0};
 let G={ptrs:new Map(),lastA:0,lastR:0,lastD:0,lastTap:0,moved:0,lastT:0};
 let W=300,H=300,SZ=300;
 function physics(dt,t){
@@ -420,7 +420,7 @@ function physics(dt,t){
  // deriva: el organismo pasea por la pantalla; más vivo cuantos más rasgos tiene
  const life=Math.min(1,S.history.length/6);
  if(!V.dragging){if(t>V.nextT){V.tx=(Math.random()*2-1)*Math.max(0,W/2-V.ex*V.fit*1.15-8);V.ty=(Math.random()*2-1)*Math.max(0,H/2-V.ey*V.fit*1.15-8);V.nextT=t+2.5+Math.random()*3}
-  const k=.9+life*1.5,c=1.6;V.vx+=(-k*(V.px-V.tx)-c*V.vx)*dt;V.vy+=(-k*(V.py-V.ty)-c*V.vy)*dt;V.px+=V.vx*dt;V.py+=V.vy*dt;
+  const k=.9+life*1.5,c=1.6;V.vx+=(-k*(V.px-V.tx)-c*V.vx)*dt;V.vy+=(-k*(V.py-(V.hold?Math.min(V.ty,-H*.14):V.ty))-c*V.vy)*dt;V.px+=V.vx*dt;V.py+=V.vy*dt;
   V.rot+=(.05+S.traits.spin*.5)*dt}
  // límites: los impulsos acumulados (superpoder, gestos) no pueden sacar al ser de pantalla
  V.scaleV=Math.max(-14,Math.min(14,V.scaleV));V.scale=Math.max(.15,Math.min(2.4,V.scale));
@@ -531,7 +531,10 @@ function renderHome(){
  bindGestures(c);
  const pr=document.getElementById('prompt'),pq=pr.querySelector('b');let pi=-1;
  const ask=()=>{const pool=CONCEPTS.filter(x=>!S.mix[x.id]);const L=pool.length?pool:CONCEPTS;let k;do{k=Math.floor(Math.random()*L.length)}while(L.length>1&&L[k].id===pi);pi=L[k].id;pq.textContent='¿Qué pasa si le sumás un poco de '+L[k].name.toLowerCase()+'?'};
- ask();setTimeout(()=>{pr.classList.add('off');setTimeout(()=>pr.remove(),700)},4000);
+ ask();const dl=window.__askDelay||0;window.__askDelay=0;
+ const up=()=>{V.hold=1},down=()=>{V.hold=0};
+ if(dl>0){pr.style.animation='none';pr.style.opacity='0';setTimeout(()=>{up();if(pr.isConnected)pr.style.opacity='1'},dl);setTimeout(()=>{down();if(pr.isConnected){pr.style.opacity='0';setTimeout(()=>pr.remove(),700)}},dl+4000)}
+ else{up();setTimeout(()=>{down();pr.classList.add('off');setTimeout(()=>pr.remove(),700)},4000)}
  app.querySelectorAll('.concept').forEach(b=>b.onclick=()=>openConcept(CONCEPTS.find(x=>x.id===b.dataset.id)));
  document.getElementById('power').onclick=openPower;const rp=document.getElementById('rf-open');if(rp)rp.onclick=()=>openRefugio();document.getElementById('take').onclick=renderExport;
 }
@@ -1143,9 +1146,9 @@ function apply(cpt,o){
  S.mix[cpt.id]=(S.mix[cpt.id]||0)+1;
  const before=stageOf(S.history.length)[1];
  S.history.push({c:cpt.id,e:o.label,t:Date.now()});save();
- renderHome();
+ window.__askDelay=3900;renderHome();
  const [x,y]=orgCenter();burst(cpt.color,80,x,y);V.scaleV+=2.5;V.rotV+=(Math.random()-.5)*6;V.vx+=(Math.random()-.5)*300;V.vy+=(Math.random()-.5)*300;
- const w=document.getElementById('word');w.innerHTML=wordHTML(cpt,S.history.length);requestAnimationFrame(()=>w.classList.add('show'));setTimeout(()=>w.classList.remove('show'),1500);
+ const w=document.getElementById('word');w.innerHTML=wordHTML(cpt,S.history.length);requestAnimationFrame(()=>w.classList.add('show'));setTimeout(()=>w.classList.remove('show'),2400);
  const after=stageOf(S.history.length)[1];
  if(after!==before){const fin=STAGES[STAGES.length-1][1];if(after===fin)setTimeout(openCongrats,1300);else setTimeout(()=>toast(`¡Pasaste a ${after}!`),900)}
 }
