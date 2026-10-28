@@ -556,17 +556,17 @@ function renderIntro(){resetMotion();
   cvs.forEach((c,i)=>{const ctx=c.getContext('2d'),dpr=c._dpr||1;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,IS,IS);
    if(!(drag&&drag.i===i)){vel[i][0]*=Math.pow(.15,dtf);vel[i][1]+=(.55-vel[i][1])*Math.min(1,dtf*1.2);spin(i,vel[i][0]*dtf,vel[i][1]*dtf)}
    if(b3){B3.M=Rm[i];window.B3D=true}
-   draw(ctx,IS,{...BASE,core:2.3,shape:i},t,{},S.seed,null);window.B3D=false});
+   draw(ctx,IS,{...BASE,core:2.3,shape:i},t,{},S.seed,null);window.B3D=false;if(b3){B3.ms=0;B3.n=0;B3.since=0}});
   requestAnimationFrame(iloop)};
  requestAnimationFrame(iloop);
- document.getElementById('start').onclick=()=>{S.name=document.getElementById('nm').value.trim();S.traits.shape=cur;D.shape=cur;S.started=true;save();renderHome();burst(SEED,30);toast('Tu forma ya está viva.')};
+ document.getElementById('start').onclick=()=>{S.name=document.getElementById('nm').value.trim();S.traits.shape=cur;Object.assign(D,S.traits);D.shape=cur;if(typeof B3!=='undefined'){B3.tier=0;B3.ms=0;B3.n=0;B3.since=0}S.started=true;save();renderHome();burst(SEED,30);toast('Tu forma ya está viva.')};
 }
 function renderHome(){
  const n=S.history.length;const st=stageOf(n);const next=STAGES.find(s=>s[0]>n);
  const fin=!next;const pct=Math.min(100,n/STAGES[STAGES.length-1][0]*100);const tc=topConcepts(S.mix);const tot=tc.reduce((a,c)=>a+S.mix[c.id],0)||1;
  app.innerHTML=`
   <div class="top">${wordmark()}<span style="display:flex;gap:8px;align-items:center">${S.refugio?'<button class="rf-pill" id="rf-open" type="button">♫ Refugio</button>':''}<span class="chip">${st[1]}</span></span></div>
-  <div class="stage" id="stage"><canvas class="org" id="org"></canvas><div class="prompt" id="prompt"><b></b><span>Tocá un elemento y descubrí cómo cambia tu forma.</span></div><div class="word" id="word"></div><div class="hint">girá · pellizcá · empujá · arrastrá · doble toque</div></div>
+  <div class="stage" id="stage"><canvas class="org" id="org"></canvas><div class="prompt" id="prompt"><b></b><span>Tocá un elemento y descubrí cómo cambia tu forma.</span></div><div class="word" id="word"></div><div class="hint">girá · pellizcá · arrastrá · doble toque</div></div>
   <div class="info">
    <h1 class="name">${autoName()}${S.name?` <span style="color:var(--mute);font-weight:500">de ${S.name}</span>`:''}</h1>
    <p class="desc">${st[2]}</p>
@@ -966,7 +966,7 @@ function body3D(ctx,size,cx,cy,R,T,t,seed,base,c1,c2,pat,hq){
  const nArms=Math.round(T.arms||0)>0;const N=B3.mini?(nArms?1300:900):hq?(nArms?B3_HQ*1.4|0:B3_HQ):Math.round((nArms?B3_TIERS[B3.tier]*1.5:B3_TIERS[B3.tier])*((T.shape|0)===1?1.7:(T.shape|0)===2?1.5:1)),SP=b3Sphere(N),U=SP.U,T1=SP.T1,T2=SP.T2,xs=SP.xs,ys=SP.ys,bk=SP.bk,ord=SP.ord,rd=SP.rd;
  // forma: ondas suaves (según la semilla) + brazos + abolladura + vibración al apretar
  const WV=b3Waves(seed),wob=(T.wobble||0)*(1+FX.squash*2.2)*(1-FX.bubble*.6),m=wob*4.6;
- const na=Math.round(T.arms||0),am=Math.min(1,T.arms||0),sq=FX.squash||0,dm=FX.dentM||0,shp=T.shape|0;
+ const na=Math.round(T.arms||0),am=Math.min(1,T.arms||0),sq=0,dm=0,shp=T.shape|0;
  const EXT=Math.max(1.9,(1+m*(WV[0][4]+WV[1][4]+WV[2][4]+WV[3][4])+.03+sq*.12)*(na>0?1+am*.95:1)*(dm>0?1.25:1)*(shp===2?1.6:shp===1?1.25:1)*1.05);
  const BOX=Math.max(64,Math.min(2600,Math.ceil(2*EXT*R*s))),O=BOX/2,Rq=R*s;
  const bkey=hq?'h':B3.mini?'m':'n';const A=(b3A[bkey]=b3A[bkey]||document.createElement('canvas')),aq=A.getContext('2d');
