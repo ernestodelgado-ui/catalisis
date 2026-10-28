@@ -209,7 +209,20 @@ h1.name{font-weight:800;letter-spacing:-.02em;font-size:clamp(20px,6vw,26px);lin
 @keyframes sway{0%,100%{transform:rotate(-4deg) scale(1)}50%{transform:rotate(5deg) scale(1.06)}}
 @media (prefers-reduced-motion:reduce){.logo .ch,.logo .lf1,.logo .lf2{animation:none}}
 .intro .wordmark{justify-content:center;font-size:40px}.intro .wordmark svg{width:40px;height:40px}
-.intro canvas{width:min(320px,34vh);height:min(320px,34vh);width:min(320px,34dvh);height:min(320px,34dvh);margin:8px auto 0;display:block;touch-action:none}
+.shapes{position:relative;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:6px 0 0;padding:0 calc(50% - 110px);flex:0 0 auto;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+.shapes::-webkit-scrollbar{display:none}
+.shp{flex:0 0 220px;height:220px;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,opacity .15s}
+.shp canvas{width:220px;height:220px;display:block;-webkit-mask-image:radial-gradient(circle at center,#000 56%,transparent 70%);mask-image:radial-gradient(circle at center,#000 56%,transparent 70%)}
+.shp-info{margin-top:2px}
+.shp-row{display:flex;align-items:center;justify-content:center;gap:14px}
+.shp-name{font-size:15px;font-weight:600;letter-spacing:.02em;color:#fff;min-width:64px}
+.shp-nav{width:32px;height:32px;border-radius:50%;border:1px solid #3A3A42;color:#fff;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 3px}
+.shp-nav:active{background:#2A2A30}
+.shp canvas{touch-action:pan-x}
+.shp.sel canvas{touch-action:none;cursor:grab}
+.dots{display:flex;gap:7px;justify-content:center;margin-top:8px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#44444C;transition:background .2s,transform .2s}
+.dots i.on{background:var(--corazon);transform:scale(1.25)}
 .intro p{max-width:34ch;margin:10px auto 0;color:var(--mute);font-size:15px}
 .intro h1{font-weight:700;font-size:24px;letter-spacing:-.015em;margin:8px 0 0}
 .intro p{color:#C4C4CB}
@@ -297,16 +310,16 @@ const CONCEPTS=[
    {label:'Confeti',desc:'Papelitos de colores en el aire.',delta:{confetti:1}},
    {label:'Brillo',desc:'Destellos que titilan.',delta:{shine:1}}]},
 ];
-const BASE={core:1.55,wobble:.25,filaments:0,dragonfly:0,lattice:0,facets:0,wings:0,branches:0,wheels:0,spin:0,grain:0,fibers:0,lobes:0,spiral:0,arms:0,squares:0,drops:0,ripples:0,dots:0,brush:0,glitch:0,sparks:0,diamonds:0,spikes:0,marble:0,glow:0,confetti:0,shine:0};
+const BASE={shape:0,core:1.55,wobble:0,filaments:0,dragonfly:0,lattice:0,facets:0,wings:0,branches:0,wheels:0,spin:0,grain:0,fibers:0,lobes:0,spiral:0,arms:0,squares:0,drops:0,ripples:0,dots:0,brush:0,glitch:0,sparks:0,diamonds:0,spikes:0,marble:0,glow:0,confetti:0,shine:0};
 const TRAITS=Object.keys(BASE);
-const STAGES=[[0,'Semilla','Todavía no reaccionaste con nada.'],[1,'Brote','Empezaste a transformarte.'],[3,'Organismo','Ya tenés una forma propia.'],[6,'Ser','Nadie más en la feria es como vos.']];
+const STAGES=[[0,'Forma','Todavía no reaccionaste con nada.'],[1,'Brote','Empezaste a transformarte.'],[3,'Organismo','Ya tenés una forma propia.'],[6,'Ser','Nadie más en la feria es como vos.']];
 const INK='#111111',SEED='#B4B4BE',PAPER='#F7F7F4';
 const isDark=()=>{if(window.__mapDark)return true;const t=document.documentElement.dataset.theme;return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)};
 
 // ------------------------------------------------------------------
 // ESTADO
 // ------------------------------------------------------------------
-let S=load()||fresh();
+let S=load()||fresh();S.traits={...BASE,...S.traits};
 function fresh(){return {name:'',seed:Math.floor(Math.random()*1e6),traits:{...BASE},history:[],mix:{},started:false,refugio:false,refugioSeen:false}}
 function load(){try{const j=localStorage.getItem('catalisis2');return j?JSON.parse(j):null}catch(e){return null}}
 function save(){try{localStorage.setItem('catalisis2',JSON.stringify(S))}catch(e){}}
@@ -327,10 +340,16 @@ function autoName(){const n=S.history.length,st=stageOf(n)[1],tc=topConcepts(S.m
 // ------------------------------------------------------------------
 function rnd(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647}
 let FX={dentA:0,dentM:0,squash:0,bubble:0};
+// forma base del ser: radio de la forma en la dirección (x,y,z). 0 esfera, 1 cubo, 2 cono, con aristas redondeadas
+function shapeR(sh,x,y,z){
+ if(sh===1){const a=x*x,b=y*y,c=z*z,a2=a*a,b2=b*b,c2=c*c;return .78/Math.pow(a2*a2*a2*a+b2*b2*b2*b+c2*c2*c2*c,1/14)}
+ if(sh===2){const rho=Math.sqrt(x*x+z*z+.004),g1=Math.max(0,(rho+.5*y)/.725),g2=Math.max(0,-y/.55);return 1/Math.pow(Math.pow(g1,16)+Math.pow(g2,16),1/16)}
+ return 1}
 function blobPath(ctx,cx,cy,R,T,t,seed){
  ctx.beginPath();const wob=T.wobble*(1+FX.squash*2.2)*(1-FX.bubble*.6);const arms=Math.round(T.arms);
  for(let i=0;i<=120;i++){const a=i/120*Math.PI*2;
   let r=R*(1+wob*.38*Math.sin(3*a+seed)+wob*.18*Math.sin(5*a-t*1.3)+.025*Math.sin(t*2)+FX.squash*.12*Math.sin(11*a+t*9));
+  if(T.shape)r*=shapeR(T.shape|0,Math.cos(a),-Math.sin(a),0);
   if(arms>0)r*=1+Math.min(1,T.arms)*.9*Math.max(0,Math.cos(arms*(a-t*.15)))**3;
   if(FX.dentM>0){const c=Math.cos(a-FX.dentA);r*=1-FX.dentM*.55*Math.max(0,c)**2+FX.dentM*.25*Math.max(0,-c)**2}
   const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
@@ -461,12 +480,12 @@ function flash(){V.flash=1;V.scaleV+=3.2;const [x,y]=orgCenter();burst('#FFFFFF'
 
 let mainCanvas=null,t0=performance.now(),last=t0;
 function loop(now){const t=(now-t0)/1000;const dt=Math.min(.05,(now-last)/1000);last=now;
- for(const k of TRAITS)D[k]+=(S.traits[k]-D[k])*.07;
+ for(const k of TRAITS)if(k!=='shape')D[k]+=(S.traits[k]-D[k])*.07;D.shape=S.traits.shape|0;
  if(mainCanvas&&mainCanvas.isConnected&&!window.__rfOpen){const ctx=mainCanvas.getContext('2d');const dpr=mainCanvas._dpr||1;W=mainCanvas.width/dpr;H=mainCanvas.height/dpr;SZ=Math.min(W,H);
   physics(dt,t);
   if(S.traits.sparks>0){const [x,y]=orgCenter();if(Math.random()<.5)particles.push({x,y,vx:(Math.random()-.5)*.02,vy:-.01-Math.random()*.015,r:.003+Math.random()*.005,c:Math.random()<.5?'#FF0000':'#FF8A00',life:.9})}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
-  ctx.save();ctx.translate(W/2+V.px,H/2+V.py);ctx.rotate(V.rot);{const Rp=SZ*.13*D.core,act=Math.min(1,TRAITS.reduce((a,k)=>a+(k==='core'||k==='wobble'||k==='spin'?0:Math.abs(D[k]||0)),0)/3),ex=Rp*(1.4+.9*act+.7*Math.min(1,D.wings||0)),ey=ex,ft=Math.min(1,W*.4/ex,H*.4/ey);V.ex=ex;V.ey=ey;V.fit+=(ft-V.fit)*.12;ctx.scale(V.scale*V.breath*V.fit,V.scale*V.breath*V.fit)}ctx.translate(-SZ/2,-SZ/2);
+  ctx.save();ctx.translate(W/2+V.px,H/2+V.py);ctx.rotate(V.rot);{const Rp=SZ*.13*D.core*[1,1.08,1.2][D.shape|0],act=Math.min(1,TRAITS.reduce((a,k)=>a+(k==='core'||k==='wobble'||k==='spin'||k==='shape'?0:Math.abs(D[k]||0)),0)/3),ex=Rp*(1.4+.9*act+.7*Math.min(1,D.wings||0)),ey=ex,ft=Math.min(1,W*.4/ex,H*.4/ey);V.ex=ex;V.ey=ey;V.fit+=(ft-V.fit)*.12;ctx.scale(V.scale*V.breath*V.fit,V.scale*V.breath*V.fit)}ctx.translate(-SZ/2,-SZ/2);
   window.B3D=B3.on&&!B3.off;draw(ctx,SZ,D,t,S.mix,S.seed,null);window.B3D=false;b3Adapt();ctx.restore();
   drawParticles(ctx,W,H);
   if(V.flash>.01){ctx.fillStyle=`rgba(255,255,255,${V.flash*.85})`;ctx.fillRect(0,0,W,H)}}
@@ -492,32 +511,62 @@ function renderWelcome(){
   ${logoStack()}
   <h1>Te damos la bienvenida.</h1>
   <p>Nadie cambia solo. Cambiamos con lo que hacemos, con quienes nos encontramos y con lo que aprendemos de otros.</p>
-  <p>Esta semilla va a acompañarte en ese recorrido. Al empezar, todos recibimos una igual. Después, vos elegís qué elementos sumar: aire, tierra, agua, fuego y corazón.</p>
-  <p>Cada encuentro la transforma. Vas a verla crecer y cambiar de forma con tus elecciones.</p>
+  <p>Vas a empezar eligiendo una forma: esfera, cubo o cono. Esa forma va a acompañarte en el recorrido. Después, vos elegís qué elementos sumar: aire, tierra, agua, fuego y corazón.</p>
+  <p>Cada encuentro la transforma. Vas a verla crecer y cambiar con tus elecciones.</p>
   <p class="ask">¿Empezamos?</p>
   <div class="actions"><button class="btn primary" id="go" type="button">Comenzar</button></div>
  </div>`;
  document.getElementById('go').onclick=()=>{const w=app.firstElementChild;w.classList.remove('screen-in');w.classList.add('screen-out');setTimeout(renderIntro,380)};
 }
 function resetMotion(){Object.assign(V,{rot:0,rotV:0,scale:1,scaleV:0,dentA:0,dentM:0,dentV:0,flash:0,px:0,py:0,vx:0,vy:0,tx:0,ty:0,fit:1});particles=[]}
+const SHAPE_NAMES=['Esfera','Cubo','Cono'];
 function renderIntro(){resetMotion();
  app.innerHTML=`<div class="intro screen-in">
   ${logoStack()}
-  <canvas id="introc"></canvas>
-  <h1>Esta es tu semilla.</h1>
-  <p>Todavía está por descubrir en qué puede convertirse. Empezá por presentarte.</p>
+  <div class="shapes" id="shapes">${SHAPE_NAMES.map((n,i)=>`<div class="shp" data-i="${i}" role="button" aria-label="${n}"><canvas></canvas></div>`).join('')}</div>
+  <div class="shp-info"><div class="shp-row"><button class="shp-nav" id="shpprev" type="button" aria-label="Forma anterior">‹</button><div class="shp-name" id="shpname"></div><button class="shp-nav" id="shpnext" type="button" aria-label="Forma siguiente">›</button></div><div class="dots" id="shpdots">${SHAPE_NAMES.map(()=>'<i></i>').join('')}</div></div>
+  <h1>Elegí tu forma.</h1>
+  <p>Girala con el dedo y deslizá desde un costado para ver las tres. Después, empezá por presentarte.</p>
   <div class="field"><label for="nm">¿Cómo te llamás? (opcional)</label><input id="nm" placeholder="Tu nombre" maxlength="24" value="${S.name||''}"></div>
-  <div class="actions" style="margin-top:12px"><button class="btn primary" id="start" type="button">Recibir mi semilla</button></div>
+  <div class="actions" style="margin-top:12px"><button class="btn primary" id="start" type="button">Elegir mi forma</button></div>
  </div>`;
- const c=document.getElementById('introc');setupCanvas(c,320,320);mainCanvas=c;bindGestures(c);V.px=V.py=V.tx=V.ty=0;
- document.getElementById('start').onclick=()=>{S.name=document.getElementById('nm').value.trim();S.started=true;save();renderHome();burst(SEED,30);toast('Tu semilla ya está viva.')};
+ mainCanvas=null;
+ const box=document.getElementById('shapes'),items=[...box.querySelectorAll('.shp')],cvs=items.map(x=>x.firstElementChild),nameEl=document.getElementById('shpname'),dots=[...document.querySelectorAll('#shpdots i')];
+ const IS=220;cvs.forEach(c=>setupCanvas(c,IS,IS));
+ let cur=S.traits.shape|0;
+ const has3=typeof b3mul==='function',Rm=SHAPE_NAMES.map((_,i)=>has3?b3mul(b3Rx(.38),b3Ry(i*1.3)):null),vel=SHAPE_NAMES.map(()=>[0,.55]);let drag=null;
+ const spin=(i,pitch,yaw)=>{if(has3){Rm[i]=b3mul(b3Rx(pitch),b3mul(b3Ry(yaw),Rm[i]));if(typeof b3Ortho==='function')Rm[i]=b3Ortho(Rm[i])}};
+ const pick=i=>{cur=i;S.traits.shape=i;D.shape=i;nameEl.textContent=SHAPE_NAMES[i];dots.forEach((d,k)=>d.classList.toggle('on',k===i));items.forEach((it,k)=>it.classList.toggle('sel',k===i))};
+ const layout=()=>{const mid=box.scrollLeft+box.clientWidth/2;let best=0,bd=1e9;
+  items.forEach((it,i)=>{const d=Math.abs(it.offsetLeft+it.offsetWidth/2-mid)/IS,k=Math.min(1,d);it.style.transform='scale('+(1-.3*k)+')';it.style.opacity=1-.55*k;if(d<bd){bd=d;best=i}});
+  if(best!==cur)pick(best)};
+ const goTo=i=>box.scrollTo({left:items[i].offsetLeft+IS/2-box.clientWidth/2,behavior:'smooth'});
+ items.forEach((it,i)=>it.onclick=()=>goTo(i));
+ dots.forEach((d,i)=>d.onclick=()=>goTo(i));
+ document.getElementById('shpprev').onclick=()=>goTo(Math.max(0,cur-1));document.getElementById('shpnext').onclick=()=>goTo(Math.min(SHAPE_NAMES.length-1,cur+1));
+ cvs.forEach((c,i)=>{
+  c.onpointerdown=e=>{if(i!==cur)return;drag={i,x:e.clientX,y:e.clientY,t:performance.now(),moved:0};try{c.setPointerCapture(e.pointerId)}catch(_){}vel[i]=[0,0]};
+  c.onpointermove=e=>{if(!drag||drag.i!==i)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y,now=performance.now(),dt=Math.max(.008,(now-drag.t)/1000);drag.moved+=Math.abs(dx)+Math.abs(dy);spin(i,dy*.011,dx*.011);vel[i]=[vel[i][0]*.5+(dy*.011/dt)*.5,vel[i][1]*.5+(dx*.011/dt)*.5];drag.x=e.clientX;drag.y=e.clientY;drag.t=now};
+  const end=()=>{if(drag&&drag.i===i)drag=null};c.onpointerup=end;c.onpointercancel=end;c.onlostpointercapture=end});
+ box.addEventListener('scroll',layout,{passive:true});
+ pick(cur);requestAnimationFrame(()=>{box.scrollLeft=items[cur].offsetLeft+IS/2-box.clientWidth/2;layout()});
+ const it0=performance.now();
+ let lastF=performance.now();
+ const iloop=now=>{if(!box.isConnected)return;const t=(now-it0)/1000,b3=typeof B3!=='undefined'&&B3.on&&!B3.off,dtf=Math.min(.05,Math.max(.001,(now-lastF)/1000));lastF=now;
+  cvs.forEach((c,i)=>{const ctx=c.getContext('2d'),dpr=c._dpr||1;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,IS,IS);
+   if(!(drag&&drag.i===i)){vel[i][0]*=Math.pow(.15,dtf);vel[i][1]+=(.55-vel[i][1])*Math.min(1,dtf*1.2);spin(i,vel[i][0]*dtf,vel[i][1]*dtf)}
+   if(b3){B3.M=Rm[i];window.B3D=true}
+   draw(ctx,IS,{...BASE,core:2.3,shape:i},t,{},S.seed,null);window.B3D=false});
+  requestAnimationFrame(iloop)};
+ requestAnimationFrame(iloop);
+ document.getElementById('start').onclick=()=>{S.name=document.getElementById('nm').value.trim();S.traits.shape=cur;D.shape=cur;S.started=true;save();renderHome();burst(SEED,30);toast('Tu forma ya está viva.')};
 }
 function renderHome(){
  const n=S.history.length;const st=stageOf(n);const next=STAGES.find(s=>s[0]>n);
  const fin=!next;const pct=Math.min(100,n/STAGES[STAGES.length-1][0]*100);const tc=topConcepts(S.mix);const tot=tc.reduce((a,c)=>a+S.mix[c.id],0)||1;
  app.innerHTML=`
   <div class="top">${wordmark()}<span style="display:flex;gap:8px;align-items:center">${S.refugio?'<button class="rf-pill" id="rf-open" type="button">♫ Refugio</button>':''}<span class="chip">${st[1]}</span></span></div>
-  <div class="stage" id="stage"><canvas class="org" id="org"></canvas><div class="prompt" id="prompt"><b></b><span>Tocá un elemento y descubrí cómo cambia tu semilla.</span></div><div class="word" id="word"></div><div class="hint">girá · pellizcá · empujá · arrastrá · doble toque</div></div>
+  <div class="stage" id="stage"><canvas class="org" id="org"></canvas><div class="prompt" id="prompt"><b></b><span>Tocá un elemento y descubrí cómo cambia tu forma.</span></div><div class="word" id="word"></div><div class="hint">girá · pellizcá · empujá · arrastrá · doble toque</div></div>
   <div class="info">
    <h1 class="name">${autoName()}${S.name?` <span style="color:var(--mute);font-weight:500">de ${S.name}</span>`:''}</h1>
    <p class="desc">${st[2]}</p>
@@ -609,7 +658,7 @@ function buildMapBase(img){
 function makeDemoBeings(){
  const r=rnd(20271),out=[];
  for(let i=0;i<24;i++){
-  const z=ZONES[i%ZONES.length],n=1+Math.floor(r()*9),T={...BASE,core:1.15},mix={},route=[];
+  const z=ZONES[i%ZONES.length],n=1+Math.floor(r()*9),T={...BASE,core:1.15,shape:(i*5+1)%3},mix={},route=[];
   for(let j=0;j<n;j++){const c=r()<.55?CONCEPTS.find(q=>q.id===z.c):CONCEPTS[Math.floor(r()*5)],e=c.elements[Math.floor(r()*5)];for(const k in e.delta)T[k]=(T[k]||0)+e.delta[k];mix[c.id]=(mix[c.id]||0)+1;route.push({c:c.id,e:e.label})}
   out.push({T,mix,route,n,seed:Math.floor(r()*1e6),zone:z,name:MAP_NAMES[i%MAP_NAMES.length],me:false,
    hx:z.x+(r()-.5)*60,hy:z.y+(r()-.5)*60,rx:50+r()*80,ry:40+r()*70,sp:.12+r()*.18,sp2:.1+r()*.16,ph:r()*6.28,rot:(r()-.5)*.5,x:0,y:0})}
@@ -914,19 +963,19 @@ function body3D(ctx,size,cx,cy,R,T,t,seed,base,c1,c2,pat,hq){
  const t0=performance.now();
  const tr=ctx.getTransform(),sc=Math.hypot(tr.a,tr.b)||1,dp=hq?1:Math.min(2,window.devicePixelRatio||1);
  const QS=hq?1.1:.62,s=(sc/dp)*QS;              // píxeles del lienzo auxiliar por unidad local
- const nArms=Math.round(T.arms||0)>0;const N=B3.mini?(nArms?1300:900):hq?(nArms?B3_HQ*1.4|0:B3_HQ):(nArms?Math.round(B3_TIERS[B3.tier]*1.5):B3_TIERS[B3.tier]),SP=b3Sphere(N),U=SP.U,T1=SP.T1,T2=SP.T2,xs=SP.xs,ys=SP.ys,bk=SP.bk,ord=SP.ord,rd=SP.rd;
+ const nArms=Math.round(T.arms||0)>0;const N=B3.mini?(nArms?1300:900):hq?(nArms?B3_HQ*1.4|0:B3_HQ):Math.round((nArms?B3_TIERS[B3.tier]*1.5:B3_TIERS[B3.tier])*((T.shape|0)===1?1.7:(T.shape|0)===2?1.5:1)),SP=b3Sphere(N),U=SP.U,T1=SP.T1,T2=SP.T2,xs=SP.xs,ys=SP.ys,bk=SP.bk,ord=SP.ord,rd=SP.rd;
  // forma: ondas suaves (según la semilla) + brazos + abolladura + vibración al apretar
  const WV=b3Waves(seed),wob=(T.wobble||0)*(1+FX.squash*2.2)*(1-FX.bubble*.6),m=wob*4.6;
- const na=Math.round(T.arms||0),am=Math.min(1,T.arms||0),sq=FX.squash||0,dm=FX.dentM||0;
- const EXT=Math.max(1.9,(1+m*(WV[0][4]+WV[1][4]+WV[2][4]+WV[3][4])+.03+sq*.12)*(na>0?1+am*.95:1)*(dm>0?1.25:1)*1.05);
+ const na=Math.round(T.arms||0),am=Math.min(1,T.arms||0),sq=FX.squash||0,dm=FX.dentM||0,shp=T.shape|0;
+ const EXT=Math.max(1.9,(1+m*(WV[0][4]+WV[1][4]+WV[2][4]+WV[3][4])+.03+sq*.12)*(na>0?1+am*.95:1)*(dm>0?1.25:1)*(shp===2?1.6:shp===1?1.25:1)*1.05);
  const BOX=Math.max(64,Math.min(2600,Math.ceil(2*EXT*R*s))),O=BOX/2,Rq=R*s;
  const bkey=hq?'h':B3.mini?'m':'n';const A=(b3A[bkey]=b3A[bkey]||document.createElement('canvas')),aq=A.getContext('2d');
  if(A.width!==BOX){A.width=BOX;A.height=BOX}aq.setTransform(1,0,0,1,0,0);aq.clearRect(0,0,BOX,BOX);
  const M=B3.M;let dx=0,dy=0,dz=0;
  if(dm>0){const a=FX.dentA,vx=Math.cos(a),vy=-Math.sin(a);dx=M[0]*vx+M[3]*vy;dy=M[1]*vx+M[4]*vy;dz=M[2]*vx+M[5]*vy}
  const w0=WV[0],w1=WV[1],w2=WV[2],w3=WV[3],tt=t;
- const rr=(x,y,z)=>{let d=w0[4]*Math.sin(w0[0]*x+w0[1]*y+w0[2]*z+w0[3]+tt*w0[5])+w1[4]*Math.sin(w1[0]*x+w1[1]*y+w1[2]*z+w1[3]+tt*w1[5])+w2[4]*Math.sin(w2[0]*x+w2[1]*y+w2[2]*z+w2[3]+tt*w2[5])+w3[4]*Math.sin(w3[0]*x+w3[1]*y+w3[2]*z+w3[3]+tt*w3[5]);
-  let r=1+m*d+.025*Math.sin(tt*2);
+ const rr=(x,y,z,sf)=>{let d=m===0?0:w0[4]*Math.sin(w0[0]*x+w0[1]*y+w0[2]*z+w0[3]+tt*w0[5])+w1[4]*Math.sin(w1[0]*x+w1[1]*y+w1[2]*z+w1[3]+tt*w1[5])+w2[4]*Math.sin(w2[0]*x+w2[1]*y+w2[2]*z+w2[3]+tt*w2[5])+w3[4]*Math.sin(w3[0]*x+w3[1]*y+w3[2]*z+w3[3]+tt*w3[5]);
+  let r=(1+m*d+.025*Math.sin(tt*2))*(sf||1);
   if(sq>0||na>0){const az=Math.atan2(z,x);if(sq>0)r+=sq*.12*Math.sin(11*az+9*tt);if(na>0){const c=Math.cos(na*(az-tt*.15));if(c>0){const c2=c*c;r*=1+am*.95*c2*c2*c2*Math.pow(Math.max(0,1-Math.abs(y)),2.5)}}}
   if(dm>0){const dd=x*dx+y*dy+z*dz;r*=1-dm*.55*(dd>0?dd*dd:0)+dm*.25*(dd<0?dd*dd:0)}
   return r};
@@ -947,20 +996,25 @@ function body3D(ctx,size,cx,cy,R,T,t,seed,base,c1,c2,pat,hq){
    if(ps>.02){const g=Math.atan2(uy,ux)/6.2832+Math.acos(uz<-1?-1:uz>1?1:uz)/Math.PI*3.4,f=g-Math.floor(g);if(f<.1){const e=Math.min(f,.1-f)*28,cv=(e>1?1:e)*ps*.85;if(cv>best){best=cv;bt=7;bc=e>1?1:e}}}
    pc[i]=bt>0?1+(bt-1)*3+((bc>.66?3:bc>.33?2:1)-1):0
 }}}
- const fast=!(sq>0||na>0||dm>0),wk=[w0,w1,w2,w3],sm=Math.sin(tt*2)*.025;
+ let SHC=null;
+ if(shp){SHC=SP['sh'+shp];if(!SHC){SHC=SP['sh'+shp]=new Float32Array(N*3);for(let i=0;i<N;i++){const j=i*3,ux=U[j],uy=U[j+1],uz=U[j+2];
+   let ax=ux+T1[j]*.035,ay=uy+T1[j+1]*.035,az2=uz+T1[j+2]*.035,l=Math.hypot(ax,ay,az2);ax/=l;ay/=l;az2/=l;
+   let bx=ux+T2[j]*.035,by=uy+T2[j+1]*.035,bz=uz+T2[j+2]*.035;l=Math.hypot(bx,by,bz);bx/=l;by/=l;bz/=l;
+   SHC[j]=shapeR(shp,ux,uy,uz);SHC[j+1]=shapeR(shp,ax,ay,az2);SHC[j+2]=shapeR(shp,bx,by,bz)}}}
+ const fast=!(sq>0||na>0||dm>0||shp>0),wk=[w0,w1,w2,w3],sm=Math.sin(tt*2)*.025;
  for(let i=0;i<N;i++){const j=i*3,ux=U[j],uy=U[j+1],uz=U[j+2];
   let nx,ny,nz,r0;
   if(fast){let d=0,gx=0,gy=0,gz=0;for(let q=0;q<4;q++){const w=wk[q],ph=w[0]*ux+w[1]*uy+w[2]*uz+w[3]+tt*w[5],sn=Math.sin(ph),cs=Math.cos(ph)*w[4];d+=w[4]*sn;gx+=cs*w[0];gy+=cs*w[1];gz+=cs*w[2]}
    r0=1+m*d+sm;const gu=gx*ux+gy*uy+gz*uz,f=m/r0;nx=ux-f*(gx-gu*ux);ny=uy-f*(gy-gu*uy);nz=uz-f*(gz-gu*uz)}
-  else{r0=rr(ux,uy,uz);
-  let ax=ux+T1[j]*.035,ay=uy+T1[j+1]*.035,az2=uz+T1[j+2]*.035,l=Math.hypot(ax,ay,az2);ax/=l;ay/=l;az2/=l;const r1=rr(ax,ay,az2);
-  let bx=ux+T2[j]*.035,by=uy+T2[j+1]*.035,bz=uz+T2[j+2]*.035;l=Math.hypot(bx,by,bz);bx/=l;by/=l;bz/=l;const r2=rr(bx,by,bz);
+  else{r0=rr(ux,uy,uz,SHC?SHC[j]:1);
+  let ax=ux+T1[j]*.035,ay=uy+T1[j+1]*.035,az2=uz+T1[j+2]*.035,l=Math.hypot(ax,ay,az2);ax/=l;ay/=l;az2/=l;const r1=rr(ax,ay,az2,SHC?SHC[j+1]:1);
+  let bx=ux+T2[j]*.035,by=uy+T2[j+1]*.035,bz=uz+T2[j+2]*.035;l=Math.hypot(bx,by,bz);bx/=l;by/=l;bz/=l;const r2=rr(bx,by,bz,SHC?SHC[j+2]:1);
   const q0x=ux*r0,q0y=uy*r0,q0z=uz*r0,e1x=ax*r1-q0x,e1y=ay*r1-q0y,e1z=az2*r1-q0z,e2x=bx*r2-q0x,e2y=by*r2-q0y,e2z=bz*r2-q0z;
   nx=e1y*e2z-e1z*e2y;ny=e1z*e2x-e1x*e2z;nz=e1x*e2y-e1y*e2x;if(nx*ux+ny*uy+nz*uz<0){nx=-nx;ny=-ny;nz=-nz}}
   const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nx/=nl;ny/=nl;nz/=nl;const p0x=ux*r0,p0y=uy*r0,p0z=uz*r0;
   const Nx=M[0]*nx+M[1]*ny+M[2]*nz,Ny=M[3]*nx+M[4]*ny+M[5]*nz,Nz=M[6]*nx+M[7]*ny+M[8]*nz;
   if(Nz<-.02){bk[i]=65535;continue}
-  rd[i]=r0>1?Math.pow(r0,1.5):1;xs[i]=O+(M[0]*p0x+M[1]*p0y+M[2]*p0z)*Rq;ys[i]=O-(M[3]*p0x+M[4]*p0y+M[5]*p0z)*Rq;
+  rd[i]=shp?Math.sqrt(Math.max(1,r0*r0/Math.max(.3,nx*ux+ny*uy+nz*uz))):(r0>1?Math.pow(r0,1.5):1);xs[i]=O+(M[0]*p0x+M[1]*p0y+M[2]*p0z)*Rq;ys[i]=O-(M[3]*p0x+M[4]*p0y+M[5]*p0z)*Rq;
   const df=Math.max(0,Nx*B3_L[0]+Ny*B3_L[1]+Nz*B3_L[2]),sd=Math.max(0,Nx*B3_H[0]+Ny*B3_H[1]+Nz*B3_H[2]),spec=Math.pow(sd,42),rim=Math.pow(1-Math.max(0,Nz),3);
   let v=.1+.62*df+.62*spec+.22*rim*(.4+.6*Math.max(0,-Nx*.5+Ny*.4+.5));v=v>1.15?1.15:(v<0?0:v);
   const b=Math.round(v/1.15*(NB-1));
@@ -986,10 +1040,10 @@ const v3perp=d=>{const r=Math.abs(d[1])>.9?[1,0,0]:[0,1,0];return v3n(v3c(d,r))}
 const b3dir={};
 function b3Dirs(n,seed){const k=n+'|'+seed;if(b3dir[k])return b3dir[k];const out=[],g=2.399963229728653,off=(seed%628)/100;for(let i=0;i<n;i++){const y=1-2*(i+.5)/n,r=Math.sqrt(1-y*y),a=i*g+off;out.push([Math.cos(a)*r,y,Math.sin(a)*r])}return b3dir[k]=out}
 const b3tree={};
-function b3Tree(b,seed){const k=b+'|'+seed;if(b3tree[k])return b3tree[k];const r=rnd(seed+21),segs=[];
+function b3Tree(b,seed,sh){sh=sh|0;const k=b+'|'+seed+'|'+sh;if(b3tree[k])return b3tree[k];const r=rnd(seed+21),segs=[];
  const grow=(p,d,l,depth)=>{if(depth>3||l<.12)return;const e=[p[0]+d[0]*l,p[1]+d[1]*l,p[2]+d[2]*l];segs.push([p,e,depth]);
   for(const sg of[-1,1]){const ax=v3n(v3c(d,[r()-.5,r()-.5,r()-.5]));grow(e,v3rot(d,ax,.5*sg+(r()-.5)*.3),l*.65,depth+1)}};
- for(let i=0;i<b;i++){const az=i*1.9+seed*.02,th=.7+.5*r(),d=[Math.cos(az)*Math.sin(th),Math.cos(th),Math.sin(az)*Math.sin(th)];grow([d[0]*.92,d[1]*.92,d[2]*.92],d,.9,0)}
+ for(let i=0;i<b;i++){const az=i*1.9+seed*.02,th=.7+.5*r(),d=[Math.cos(az)*Math.sin(th),Math.cos(th),Math.sin(az)*Math.sin(th)];{const rs=sh?shapeR(sh,d[0],d[1],d[2]):1;grow([d[0]*.92*rs,d[1]*.92*rs,d[2]*.92*rs],d,.9,0)}}
  return b3tree[k]=segs}
 function att3D(ctx,cx,cy,R,T,t,seed,pass,size){
  const M=B3.M,L=B3_L,list=[],hq=!!window.B3HQ,dk=!hq&&typeof isDark==='function'&&isDark();
@@ -1001,18 +1055,19 @@ function att3D(ctx,cx,cy,R,T,t,seed,pass,size){
  const poly=(pts,fill,stroke,lw,n)=>{list.push({z:zOf(pts),f:()=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(SX(p),SY(p)):ctx.moveTo(SX(p),SY(p)));ctx.closePath();if(fill){ctx.fillStyle=typeof fill==='function'?fill(n?lit(n):1):fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}})};
  const line=(pts,stroke,lw,fade)=>{list.push({z:zOf(pts),f:()=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(SX(p),SY(p)):ctx.moveTo(SX(p),SY(p)));ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}})};
  // ---- púas (Erizo): conos rosas que salen de la superficie ----
+ const SH=T.shape|0,rsh=d=>SH?shapeR(SH,d[0],d[1],d[2]):1;
  const ns=Math.round(T.spikes||0);
  if(ns>0){const dirs=b3Dirs(ns,seed),pc=[255,0,178];
-  for(let i=0;i<ns;i++){const d=dirs[i],len=1+1.15*(1+.08*Math.sin(t*1.7+i)),u1=v3perp(d),u2=v3c(d,u1),tip=[d[0]*len,d[1]*len,d[2]*len],ring=[];
-   for(let k=0;k<8;k++){const a=k/8*6.2832,c=Math.cos(a)*.17,s=Math.sin(a)*.17;ring.push([d[0]*.9+u1[0]*c+u2[0]*s,d[1]*.9+u1[1]*c+u2[1]*s,d[2]*.9+u1[2]*c+u2[2]*s])}
+  for(let i=0;i<ns;i++){const d=dirs[i],rs=rsh(d),len=rs+1.15*(1+.08*Math.sin(t*1.7+i)),u1=v3perp(d),u2=v3c(d,u1),tip=[d[0]*len,d[1]*len,d[2]*len],ring=[];
+   for(let k=0;k<8;k++){const a=k/8*6.2832,c=Math.cos(a)*.17,s=Math.sin(a)*.17;ring.push([d[0]*.9*rs+u1[0]*c+u2[0]*s,d[1]*.9*rs+u1[1]*c+u2[1]*s,d[2]*.9*rs+u1[2]*c+u2[2]*s])}
    for(let k=0;k<8;k++){const a=ring[k],b=ring[(k+1)%8],n=v3n(v3c([b[0]-a[0],b[1]-a[1],b[2]-a[2]],[tip[0]-a[0],tip[1]-a[1],tip[2]-a[2]]));
     poly([a,b,tip],kk=>col(pc,.55+.75*kk,1),null,0,n);list[list.length-1].st=1}}}
  // ---- hojas (Brote): hojas amarillas con nervio central ----
  const nl=Math.ceil(T.lobes||0);
  for(let i=0;i<nl;i++){const sc=Math.min(1,T.lobes-i);if(sc<=0)continue;
   const az=i*2.1+seed*.01+.08*Math.sin(t*1.4+i),el=.45+.25*Math.sin(i*1.7),dir=[Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*Math.cos(el)];
-  let tg=[-dir[0]*dir[1],1-dir[1]*dir[1],-dir[2]*dir[1]];tg=v3n(tg);const bn=v3c(dir,tg),ph=.5,ax=[dir[0]*Math.cos(ph)+tg[0]*Math.sin(ph),dir[1]*Math.cos(ph)+tg[1]*Math.sin(ph),dir[2]*Math.cos(ph)+tg[2]*Math.sin(ph)],Lh=1.25*sc,Wd=.5*sc,left=[],right=[],mid=[];
-  for(let k=0;k<=12;k++){const s=k/12,w=Wd*Math.pow(Math.sin(Math.PI*s),.8),p=[dir[0]*.88+ax[0]*s*Lh+tg[0]*s*s*.25*sc,dir[1]*.88+ax[1]*s*Lh+tg[1]*s*s*.25*sc,dir[2]*.88+ax[2]*s*Lh+tg[2]*s*s*.25*sc];
+  let tg=[-dir[0]*dir[1],1-dir[1]*dir[1],-dir[2]*dir[1]];tg=v3n(tg);const bn=v3c(dir,tg),ph=.5,ax=[dir[0]*Math.cos(ph)+tg[0]*Math.sin(ph),dir[1]*Math.cos(ph)+tg[1]*Math.sin(ph),dir[2]*Math.cos(ph)+tg[2]*Math.sin(ph)],Lh=1.25*sc,Wd=.5*sc,left=[],right=[],mid=[],rb=.88*rsh(dir);
+  for(let k=0;k<=12;k++){const s=k/12,w=Wd*Math.pow(Math.sin(Math.PI*s),.8),p=[dir[0]*rb+ax[0]*s*Lh+tg[0]*s*s*.25*sc,dir[1]*rb+ax[1]*s*Lh+tg[1]*s*s*.25*sc,dir[2]*rb+ax[2]*s*Lh+tg[2]*s*s*.25*sc];
    mid.push(p);left.push([p[0]+bn[0]*w,p[1]+bn[1]*w,p[2]+bn[2]*w]);right.push([p[0]-bn[0]*w,p[1]-bn[1]*w,p[2]-bn[2]*w])}
   const n=v3n(v3c(ax,bn));poly(left.concat(right.reverse()),kk=>col([239,215,79],.55+.6*kk,1),'rgba(60,45,0,.35)',1,n);
   line(mid,'rgba(40,30,0,.7)',Math.max(1,size*.003))}
@@ -1037,12 +1092,12 @@ function att3D(ctx,cx,cy,R,T,t,seed,pass,size){
  // ---- raíces (Raíz): curvas finas que salen del cuerpo ----
  const nf=Math.round(T.fibers||0),ink=hq||!dk?'rgba(17,17,17,.85)':'rgba(242,242,238,.85)',lw0=Math.max(1.2,size*.0045);
  if(nf>0){const dirs=b3Dirs(nf,seed+7),r=rnd(seed+31);
-  for(let i=0;i<nf;i++){const d=dirs[i],l=.5+r()*1.1,k=(r()-.5)*.8,tg=v3perp(d),end=v3n([d[0]+tg[0]*k*.4,d[1]+tg[1]*k*.4,d[2]+tg[2]*k*.4]),ct=v3n([d[0]+tg[0]*k,d[1]+tg[1]*k,d[2]+tg[2]*k]),p0=[d[0]*.85,d[1]*.85,d[2]*.85],p1=[ct[0]*(.85+l*.5),ct[1]*(.85+l*.5),ct[2]*(.85+l*.5)],p2=[end[0]*(.85+l),end[1]*(.85+l),end[2]*(.85+l)],pts=[];
+  for(let i=0;i<nf;i++){const d=dirs[i],l=.5+r()*1.1,k=(r()-.5)*.8,tg=v3perp(d),end=v3n([d[0]+tg[0]*k*.4,d[1]+tg[1]*k*.4,d[2]+tg[2]*k*.4]),ct=v3n([d[0]+tg[0]*k,d[1]+tg[1]*k,d[2]+tg[2]*k]),rb=.85*rsh(d),p0=[d[0]*rb,d[1]*rb,d[2]*rb],p1=[ct[0]*(rb+l*.5),ct[1]*(rb+l*.5),ct[2]*(rb+l*.5)],p2=[end[0]*(rb+l),end[1]*(rb+l),end[2]*(rb+l)],pts=[];
    for(let q=0;q<=12;q++){const f=q/12,a=(1-f)*(1-f),b=2*f*(1-f),c=f*f;pts.push([a*p0[0]+b*p1[0]+c*p2[0],a*p0[1]+b*p1[1]+c*p2[1],a*p0[2]+b*p1[2]+c*p2[2]])}
    line(pts,ink,lw0)}}
  // ---- ramas (Rama): árbol que se bifurca ----
  const nb=Math.round(T.branches||0);
- if(nb>0){for(const sg of b3Tree(nb,seed)){const w=Math.max(.9,size*.0045*(1-sg[2]*.25));line([sg[0],sg[1]],ink,w)}}
+ if(nb>0){for(const sg of b3Tree(nb,seed,SH)){const w=Math.max(.9,size*.0045*(1-sg[2]*.25));line([sg[0],sg[1]],ink,w)}}
  // ---- filamentos (Flujo): hilos que giran alrededor ----
  const nfl=Math.round(T.filaments||0);
  if(nfl>0){for(let i=0;i<nfl;i++){const a0=i/nfl*6.2832+seed*.01,lat0=((i%5)-2)*.3,pts=[];
@@ -1097,7 +1152,7 @@ function att3D(ctx,cx,cy,R,T,t,seed,pass,size){
  // ---- facetas (Aire): esquirlas geométricas flotando cerca del cuerpo ----
  const nfa=Math.round(T.facets||0);
  if(nfa>0){const dirs=b3Dirs(nfa*2+6,seed+3).filter(d=>d[1]>.05).slice(0,nfa);
-  dirs.forEach((d,i)=>{const e1=v3perp(d),e2=v3c(d,e1),c0=mulp(d,1.2+.04*Math.sin(t+i)),tri=(k,off)=>[[0,.35*k],[.4*k,-.2*k],[-.4*k,-.2*k]].map(([x,y])=>addp(c0,addp(mulp(e1,x*1.4),mulp(e2,y*1.4+off))));
+  dirs.forEach((d,i)=>{const e1=v3perp(d),e2=v3c(d,e1),c0=mulp(d,(1.2+.04*Math.sin(t+i))*rsh(d)),tri=(k,off)=>[[0,.35*k],[.4*k,-.2*k],[-.4*k,-.2*k]].map(([x,y])=>addp(c0,addp(mulp(e1,x*1.4),mulp(e2,y*1.4+off))));
    poly(tri(1,0),dk&&!hq?'#F2F2EE':'#111111',null,0,d);poly(tri(.35,0).map(p=>addp(p,mulp(d,.01))),PAPERc,null,0,d)})}
  // ---- dibujar: primero lo que queda detrás del cuerpo, después lo que queda delante ----
  const sel=list.filter(o=>pass?o.z>=0:o.z<0).sort((a,b)=>a.z-b.z);
@@ -1109,7 +1164,7 @@ function openPower(){
  const sh=el(`<div class="sheet"><div class="panel power"><div class="grab"></div>
   <div class="eyebrow">Escondido en la feria</div>
   <h2>Superpoder</h2>
-  <p>Si encontraste uno de estos símbolos en un cartel, elegilo y sumale el número que lo acompaña. Probá y mirá qué le pasa a tu semilla.</p>
+  <p>Si encontraste uno de estos símbolos en un cartel, elegilo y sumale el número que lo acompaña. Probá y mirá qué le pasa a tu forma.</p>
   <div class="lbl">Símbolo</div><div class="row5">${SYMS.map(([n])=>`<button class="pick" data-s="${n}" type="button"><canvas class="g"></canvas><small>${n}</small></button>`).join('')}</div>
   <div class="lbl">Número</div><div class="row9">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pick" data-n="${n}" type="button">${n}</button>`).join('')}</div>
   <div class="msg" id="pmsg"></div>
@@ -1157,7 +1212,7 @@ function openCongrats(){
  const sh=el(`<div class="sheet"><div class="panel congrats"><div class="grab"></div>
   <div class="eyebrow">Etapa final</div>
   <h2>¡Felicitaciones!</h2>
-  <p class="cg-name">Tu semilla ahora es un <b>${autoName()}</b>.</p>
+  <p class="cg-name">Tu forma ahora es un <b>${autoName()}</b>.</p>
   <p class="cg-sub">Nadie más en la feria tiene uno igual.</p>
   <details><summary>¿Qué es una catálisis?</summary><p>Dos cosas que no reaccionarían solas se transforman en algo nuevo gracias a un <b>catalizador</b>, que lo cambia todo y no se consume. Acá fueron el aire, la tierra, el agua, el fuego y el corazón: cada elemento que elegiste le dio una forma y un color.</p></details>
   ${S.rfDone?'':'<p class="cg-hint">Hay algo más esperándote: probá un superpoder.</p>'}
@@ -1191,9 +1246,9 @@ function renderExport(){
   <div class="choices" style="margin-top:6px"><button class="btn primary" id="share" type="button">Compartir</button><button class="btn" id="save" type="button">Guardar imagen</button></div>
   <button class="btn" id="seemap" type="button" style="width:100%;margin-top:10px">Ver otros seres en el mapa</button>
   <button class="close" type="button">Cerrar</button>
-  <button class="close" id="reset" type="button" style="font-size:13px;margin-top:0">Empezar de nuevo con otra semilla</button></div></div>`);
+  <button class="close" id="reset" type="button" style="font-size:13px;margin-top:0">Empezar de nuevo con otra forma</button></div></div>`);
  const quote=sh.querySelector('#quote'),thanks=m=>{quote.textContent=m;quote.classList.add('thanks')};
- const fname='mi-ser-bioferia.png',txt=`Transformé mi semilla en un ${autoName()} en Bioferia. Nadie cambia solo: cambiamos con lo que hacemos, con quienes nos encontramos y con lo que aprendemos de otros. El cambio empieza con vos.`;
+ const fname='mi-ser-bioferia.png',txt=`Transformé mi forma en un ${autoName()} en Bioferia. Nadie cambia solo: cambiamos con lo que hacemos, con quienes nos encontramos y con lo que aprendemos de otros. El cambio empieza con vos.`;
  const saved=()=>thanks('Imagen guardada. El cambio empieza con vos: ¡gracias por ser parte!');
  const download=async b=>{
   try{const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
