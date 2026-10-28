@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Catálisis Bioferia</title>
 <meta name="description" content="Recibí una semilla, sumale elementos y descubrí en qué se transforma. Bioferia 2027.">
 <meta name="theme-color" content="#121214">
@@ -27,7 +27,7 @@
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --paper:#121214; --ink:#F2F2EE; --mute:#9A9AA2; --line:#2A2A30; --card:#1B1B20; color-scheme:dark } }
 :root[data-theme="dark"]{ --paper:#121214; --ink:#F2F2EE; --mute:#9A9AA2; --line:#2A2A30; --card:#1B1B20; color-scheme:dark }
-html,body{height:100%;overflow:hidden}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%}
 html{height:100vh;height:100dvh;height:var(--app-h,100dvh)} /* alto real visible: en el celular las barras del navegador no tapan los botones */
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
@@ -436,6 +436,12 @@ function burst(color,n=46,ox=.5,oy=.5){for(let i=0;i<n;i++){const a=Math.random(
 const V={rot:0,rotV:0,scale:1,scaleV:0,dentA:0,dentM:0,dentV:0,flash:0,dragging:false,px:0,py:0,vx:0,vy:0,tx:0,ty:0,nextT:0,hold:0,breath:0,fit:1,ex:0,ey:0};
 let G={ptrs:new Map(),lastA:0,lastR:0,lastD:0,lastTap:0,moved:0,lastT:0};
 let W=300,H=300,SZ=300;
+function clampV(bounce){
+ if(!(W&&H))return;
+ const k=V.scale*V.fit*1.04,mx=Math.max(0,W/2-V.ex*k-4),my=Math.max(0,H/2-V.ey*k-4);
+ if(V.px>mx){V.px=mx;if(bounce&&V.vx>0)V.vx*=-.35}else if(V.px<-mx){V.px=-mx;if(bounce&&V.vx<0)V.vx*=-.35}
+ if(V.py>my){V.py=my;if(bounce&&V.vy>0)V.vy*=-.35}else if(V.py<-my){V.py=-my;if(bounce&&V.vy<0)V.vy*=-.35}
+ const vm=Math.max(W,H)*1.1;V.vx=Math.max(-vm,Math.min(vm,V.vx));V.vy=Math.max(-vm,Math.min(vm,V.vy))}
 function physics(dt,t){
  if(B3.on&&!B3.off){if(!V.dragging){const f=Math.exp(-dt*1.5);if(Math.abs(B3.wx)+Math.abs(B3.wy)>.0005)B3.M=b3mul(b3mul(b3Rx(B3.wx*dt),b3Ry(B3.wy*dt)),B3.M);B3.wx*=f;B3.wy*=f;B3.M=b3mul(b3Ry(.2*dt),B3.M)}if(++B3.ortho>240){B3.ortho=0;B3.M=b3Ortho(B3.M)}}
  if(!V.dragging){V.rot+=V.rotV*dt;V.rotV*=Math.pow(.25,dt)}
@@ -449,7 +455,7 @@ function physics(dt,t){
   V.rot+=(.05+S.traits.spin*.5)*dt}
  // límites: los impulsos acumulados (superpoder, gestos) no pueden sacar al ser de pantalla
  V.scaleV=Math.max(-14,Math.min(14,V.scaleV));V.scale=Math.max(.15,Math.min(2.4,V.scale));
- if(W&&H){V.px=Math.max(-W/2,Math.min(W/2,V.px));V.py=Math.max(-H/2,Math.min(H/2,V.py))}
+ clampV(true);
  V.breath=1+.04*Math.sin(t*1.6)+.03*life*Math.sin(t*3.1);
  FX.squash=Math.max(0,1-V.scale)*1.4;FX.bubble=Math.max(0,V.scale-1)*1.2;FX.dentA=V.dentA-V.rot;FX.dentM=Math.min(1,V.dentM);
 }
@@ -464,7 +470,7 @@ function bindGestures(c){
   if(G.ptrs.size===1){const a=Math.atan2(p.y,p.x),r=Math.hypot(p.x,p.y);const now=performance.now();const dt=Math.max(1,now-G.lastT)/1000;
    let da=a-G.lastA;if(da>Math.PI)da-=2*Math.PI;if(da<-Math.PI)da+=2*Math.PI;
    if(r>.34){ // lejos del organismo: lo arrastrás por la pantalla
-    const sz=Math.min(W,H);V.px+=(p.x-prev.x)*sz;V.py+=(p.y-prev.y)*sz;V.tx=V.px;V.ty=V.py;V.px=Math.max(-W/2,Math.min(W/2,V.px));V.py=Math.max(-H/2,Math.min(H/2,V.py))}
+    const sz=Math.min(W,H);V.px+=(p.x-prev.x)*sz;V.py+=(p.y-prev.y)*sz;clampV(false);V.tx=V.px;V.ty=V.py}
    else{const inward=(G.lastR-r);
     if(B3.on&&!B3.off){const rc=c.getBoundingClientRect(),SZm=Math.min(rc.width,rc.height),dxp=(p.x-prev.x)*SZm,dyp=(p.y-prev.y)*SZm,tangPx=Math.abs(da)*Math.min(1,r*3)*r*SZm;
      if(inward>0&&r>.17&&r<.3&&inward*SZm>.6*tangPx){V.dentA=a;V.dentM=Math.min(1,V.dentM+inward*9);V.dentV=0}
@@ -1281,7 +1287,10 @@ function renderExport(){
 }
 
 // ARRANQUE: un QR real abre la app con #aire, #tierra, #agua, #fuego o #corazon
-const setH=()=>document.documentElement.style.setProperty('--app-h',innerHeight+'px');setH();addEventListener('resize',setH);addEventListener('orientationchange',()=>setTimeout(setH,250));
+const setH=()=>document.documentElement.style.setProperty('--app-h',innerHeight+'px');setH();
+['gesturestart','gesturechange','gestureend'].forEach(e=>document.addEventListener(e,ev=>ev.preventDefault(),{passive:false}));
+const unscroll=()=>{if(scrollX||scrollY)scrollTo(0,0);for(const e of[document.documentElement,document.body])if(e.scrollLeft||e.scrollTop){e.scrollLeft=0;e.scrollTop=0}};addEventListener('scroll',unscroll,{passive:true});document.addEventListener('scroll',unscroll,{passive:true,capture:true});
+if(window.visualViewport)visualViewport.addEventListener('scroll',()=>{if(visualViewport.offsetLeft||visualViewport.offsetTop)scrollTo(0,0)});addEventListener('resize',setH);addEventListener('orientationchange',()=>setTimeout(setH,250));
 // #inicio borra lo guardado y vuelve a la bienvenida (para probar la experiencia desde cero)
 if(/^#(inicio|bienvenida|reset)$/.test(location.hash)){S=fresh();D={...BASE};save();history.replaceState(null,'',location.pathname+location.search)}
 paintBg();S.started?renderHome():renderWelcome();
