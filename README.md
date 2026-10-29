@@ -2,7 +2,7 @@
 
 Versión 3D: el ser y sus elementos tienen volumen y se pueden girar con el dedo. Si el celular va lento, baja la calidad sola o vuelve a 2D.
 
-Prototipo interactivo de la marca Bioferia. Cada persona elige una forma (esfera, cubo o cono), suma elementos de Aire, Tierra, Agua, Fuego y Corazón, y se lleva un ser único (postal PNG de 1080×1350).
+Prototipo interactivo de la marca Bioferia. Cada persona elige una forma (esfera lisa o pompón), suma elementos de Aire, Tierra, Agua, Fuego y Corazón, y se lleva un ser único (postal PNG de 1080×1350).
 
 Es una sola página estática: no necesita servidor ni base de datos.
 
